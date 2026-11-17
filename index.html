@@ -1006,10 +1006,18 @@ async function attachCar(){
   carRef=FS.collection('cars').doc(CAR_ID);
   let snap;
   try{ snap=await carRef.get(); }
-  catch(e){ showLogin('<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.<br><span class="tiny">('+esc((e&&(e.code||e.message))||'?')+')</span></div>'
-      +'<button class="btn gold block" id="luRetry" style="margin:10px 0">🔄 جرّب تاني</button>'
+  catch(e){
+    const code=(e&&(e.code||e.message))||'?';
+    const denied=String(code).indexOf('permission-denied')>=0;
+    showLogin((denied
+        ? '<div class="note">الحساب ده مالوش صلاحية على العربية دي.<br>انت داخل بـ:<br><b>'+esc(MYEMAIL||'—')+'</b><br>'
+          +'<span class="tiny">اخرج وادخل بالحساب اللي عامل بيه المدير، أو خلي المدير يضيفك من «الإعدادات ← المستخدمون».</span></div>'
+        : '<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.<br><span class="tiny">('+esc(code)+')</span></div>')
+      +'<button class="btn gold block" id="luOut" style="margin:10px 0">🚪 خروج وتغيير الحساب</button>'
+      +(denied?'':'<button class="btn ghost block" id="luRetry" style="margin-bottom:8px">🔄 جرّب تاني</button>')
       +'<button class="btn ghost block" id="luOff">استخدام على الجهاز ده</button>');
     const rt=$('#luRetry'); if(rt)rt.onclick=()=>{rt.disabled=true;attachCar();};
+    const ou=$('#luOut'); if(ou)ou.onclick=doLogout;
     return; }
 
   if(!snap.exists){

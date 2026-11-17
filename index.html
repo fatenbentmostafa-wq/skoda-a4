@@ -253,7 +253,9 @@ const $$=(s,r=document)=>Array.prototype.slice.call((r||document).querySelectorA
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>(Number(n)||0).toLocaleString('en-US');
 const DAY=86400000;
-const todayISO=()=>new Date().toISOString().slice(0,10);
+/* التاريخ بالتوقيت المحلي (مصر) — toISOString بيحسب بتوقيت جرينتش فبيرجّع يوم ورا بعد نص الليل */
+const isoOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayISO=()=>isoOf(new Date());
 function parseISO(s){if(!s)return null;const d=new Date(s+'T00:00:00');return isNaN(d)?null:d;}
 function fmtDate(s){const d=parseISO(s);return d?d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear():'—';}
 function addMonths(s,m){const d=parseISO(s);if(!d)return null;const day=d.getDate();
@@ -311,7 +313,10 @@ const ROLE_NM={admin:'المدير',editor:'محرر',viewer:'مشاهد'};
 /* ══════════════ الحالة ══════════════ */
 let CAR=Object.assign({},DEFAULT_CAR);
 let ITEMS=[], LOGS=[], USERS=[], PERMS=JSON.parse(JSON.stringify(DEF_PERMS));
-let ROLE='admin';                 // يتاخد من Firebase بعدين
+let ROLE='admin';                 // الدور المعروض على الشاشة
+let REAL_ROLE='admin';            // الدور الحقيقي من Firebase
+let PREVIEW=null;                 // دور التجربة (للمدير بس) — null يعني مفيش تجربة
+function setRealRole(r){ REAL_ROLE=r; ROLE=PREVIEW||r; }
 let TAB='home', SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
 let DB=null;
 
@@ -359,8 +364,33 @@ async function delItem(id){ITEMS=ITEMS.filter(x=>x.id!==id);
   await W(()=>carRef.collection('items').doc(id).delete());render();}
 async function addLog(lg){LOGS.push(lg);
   await W(()=>carRef.collection('logs').doc(lg.id).set(clean(lg)));render();}
-async function delLog(id){LOGS=LOGS.filter(x=>x.id!==id);
-  await W(()=>carRef.collection('logs').doc(id).delete());render();}
+/* هل التسجيل ده أحدث من «آخر مرة» المتسجلة في البند؟ */
+function isNewer(it,km,date){
+  const lk=(it.lastKm===''||it.lastKm==null)?null:Number(it.lastKm);
+  const ld=it.lastDate||'';
+  if(lk==null&&!ld) return true;
+  if(ld&&date){ if(date>ld) return true; if(date<ld) return false; }
+  return lk==null||Number(km)>=lk;
+}
+/* بيحدّث «آخر مرة» بس — مش البند كله — عشان المحرر يقدر يسجّل غيار من غير صلاحية تعديل البنود */
+async function markDone(it,km,date,force){
+  if(!it||(!force&&!isNewer(it,km,date)))return;
+  const patch={lastKm:Number(km),lastDate:date||''};
+  Object.assign(it,patch);
+  await W(()=>carRef.collection('items').doc(it.id).set(patch,{merge:true}));
+}
+async function delLog(id){
+  const lg=LOGS.find(x=>x.id===id);
+  LOGS=LOGS.filter(x=>x.id!==id);
+  await W(()=>carRef.collection('logs').doc(id).delete());
+  /* لو التسجيل الممسوح هو «آخر مرة» في البند، يرجع لآخر تسجيل قبله */
+  const it=lg&&itemById(lg.itemId);
+  if(it&&Number(it.lastKm)===Number(lg.km)&&(it.lastDate||'')===(lg.date||'')){
+    const prev=LOGS.filter(l=>l.itemId===lg.itemId)
+      .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.km)||0)-(Number(a.km)||0))[0];
+    if(prev) await markDone(it,prev.km,prev.date,true);
+  }
+  render();}
 async function savePerms(){ await W(()=>carRef.update({perms:clean(PERMS)})); render(); }
 async function saveUsers(){ lsSave(); render(); }
 
@@ -416,7 +446,7 @@ const icOf=it=>{
 function render(){
   $('#hTtl').textContent=CAR.nm||'SKODA A4';
   $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
-  $('#hWho').textContent=ROLE_NM[ROLE]||'';
+  $('#hWho').textContent=(ROLE_NM[ROLE]||'')+(PREVIEW?' (تجربة)':'');
   $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===TAB));
   let bn='';
   if(MODE==='local') bn='<div class="note">نسخة تجريبية — البيانات لسه محفوظة على الجهاز ده. المزامنة على السيرفر هتتربط في الخطوة الجاية.</div>';
@@ -504,7 +534,7 @@ function vLog(){
     const nextTxt=s.nextKm!=null||s.nextDate
       ? 'الجاي: '+(s.nextKm!=null?nf(s.nextKm)+' كم':'')
         +(s.nextKm!=null&&s.nextDate?' أو ':'')
-        +(s.nextDate?fmtDate(s.nextDate.toISOString().slice(0,10)):'')
+        +(s.nextDate?fmtDate(isoOf(s.nextDate)):'')
       : '—';
     h+='<div class="row" data-id="'+esc(it.id)+'" style="cursor:pointer"><div class="ic">'+icOf(it)+'</div>'
      + '<div style="flex:1;min-width:0"><div class="nm">'+esc(it.nm)
@@ -615,14 +645,14 @@ function vCfg(){
      + '<button class="btn ghost block" data-a="imp"'+(canEdit('backup')?'':' disabled')+'>📥 استيراد بيانات</button></div>';
   }
 
-  /* تجربة الأدوار */
-  if(admin){
+  /* تجربة الأدوار — للمدير الحقيقي بس، وزرار الرجوع يظهر بس وإنت في وضع التجربة */
+  if(PREVIEW){
+    h+='<button class="btn ghost block" data-a="back">⬅️ رجوع لدور المدير</button>';
+  } else if(REAL_ROLE==='admin'){
     h+='<div class="card"><h3>👁️ جرّب الشكل بدور تاني</h3>'
      + '<select id="roleTry"><option value="admin">المدير (إنت)</option>'
      + '<option value="editor">محرر</option><option value="viewer">مشاهد</option></select>'
      + '<div class="tiny">للتجربة بس — تشوف التطبيق بيبان إزاي لبابا أو أخوك.</div></div>';
-  } else {
-    h+='<button class="btn ghost block" data-a="back">⬅️ رجوع لدور المدير</button>';
   }
 
   $('#view').innerHTML=h;
@@ -642,8 +672,9 @@ function vCfg(){
   $$('#view .card .row[data-id]').forEach(r=>r.onclick=()=>shItem(r.dataset.id));
   const ex=$('#view [data-a="exp"]'); if(ex)ex.onclick=shExport;
   const im=$('#view [data-a="imp"]'); if(im)im.onclick=shImport;
-  const rt=$('#roleTry'); if(rt){rt.value=ROLE;rt.onchange=()=>{ROLE=rt.value;TAB='cfg';render();};}
-  const bk=$('#view [data-a="back"]'); if(bk)bk.onclick=()=>{ROLE='admin';render();};
+  const rt=$('#roleTry'); if(rt){rt.value=ROLE;rt.onchange=()=>{
+    PREVIEW=rt.value==='admin'?null:rt.value; ROLE=PREVIEW||REAL_ROLE; TAB='cfg';render();};}
+  const bk=$('#view [data-a="back"]'); if(bk)bk.onclick=()=>{PREVIEW=null;ROLE=REAL_ROLE;render();};
   $$('#view .pb[data-pr]').forEach(b=>b.onclick=()=>{
     const p=b.dataset.pr,ro=b.dataset.ro,c=b.dataset.c,cur=PERMS[ro][p]||'none';
     PERMS[ro][p]= c==='see' ? (cur==='none'?'view':'none')
@@ -740,7 +771,7 @@ function shItem(id,ro){
    +'<div class="card" style="margin-bottom:10px"><div class="ln" style="color:var(--muted);font-size:12.5px;line-height:2">'
    +'الميعاد: '+esc(every.join(' أو ')||'بدون مدة محددة')+'<br>'
    +'آخر مرة: '+((it.lastKm!=null&&it.lastKm!=='')?nf(it.lastKm)+' كم':'—')+(it.lastDate?' · '+fmtDate(it.lastDate):'')+'<br>'
-   +'الجاي: '+(s.nextKm!=null?nf(s.nextKm)+' كم':'—')+(s.nextDate?' أو '+fmtDate(s.nextDate.toISOString().slice(0,10)):'')
+   +'الجاي: '+(s.nextKm!=null?nf(s.nextKm)+' كم':'—')+(s.nextDate?' أو '+fmtDate(isoOf(s.nextDate)):'')
    +(s.leftKm!=null?'<br>'+(s.leftKm>=0?'فاضل: '+nf(s.leftKm)+' كم'+(s.estDays!=null?' (≈ '+fmtDur(s.estDays)+')':'')
                                       :'فات بـ '+nf(-s.leftKm)+' كم'):'')
    +(s.leftDays!=null?'<br>'+(s.leftDays>=0?'فاضل بالوقت: '+fmtDur(s.leftDays):'فات بالوقت: '+fmtDur(s.leftDays)):'')
@@ -801,7 +832,9 @@ function shLog(itemId){
     close_();
     await addLog({id:uid(),itemId:it.id,nm:it.nm,km:km,date:date,by:$('#lB').value.trim(),
       cost:cEl?(parseInt(cEl.value,10)||0):0,place:$('#lP').value.trim(),notes:$('#lN').value.trim(),ts:Date.now()});
-    await saveItem(Object.assign({},it,{lastKm:km,lastDate:date}));
+    /* لو ده غيار قديم بيتسجل متأخر، مايغطّيش على تسجيل أحدث */
+    await markDone(it,km,date);
+    render();
     if(km>(Number(CAR.odo)||0)) await setOdo(km,date);
   };
 }
@@ -885,11 +918,15 @@ function shImport(){
     let d;try{d=JSON.parse($('#iT').value);}catch(e){alert('النص مش صحيح');return;}
     if(!d||(!d.items&&!d.car)){alert('مفيش بيانات');return;}
     close_();
-    if(d.car)await saveCar(Object.assign({},DEFAULT_CAR,d.car));
+    /* بيانات العربية بس — من غير bio وأي خانات غريبة */
+    if(d.car){const c=d.car;await saveCar({nm:c.nm||'SKODA A4',plate:c.plate||'',year:c.year||'',
+      odo:Number(c.odo)||0,odoDate:c.odoDate||todayISO(),avg:Number(c.avg)||0});}
     if(d.items)for(const it of d.items)await saveItem(it);
     if(d.logs)for(const l of d.logs)if(!LOGS.some(x=>x.id===l.id))await addLog(l);
-    if(d.users){USERS=d.users;saveUsers();}
-    if(d.perms){mergePerms(d.perms);savePerms();}
+    /* المستخدمين على السيرفر ليهم حسابات دخول — مينفعش يتنقلوا بنص، بيتضافوا من «المستخدمون» */
+    if(d.users){ if(MODE==='db') toast('المستخدمين مش بيتستوردوا على السيرفر — ضيفهم من «المستخدمون»');
+                 else {USERS=d.users;saveUsers();} }
+    if(d.perms&&REAL_ROLE==='admin'){mergePerms(d.perms);savePerms();}
   };
 }
 async function seed(){for(const it of DEFAULT_ITEMS)if(!itemById(it.id))
@@ -925,7 +962,7 @@ const cfgReady = () => window.FB_CONFIG && window.FB_CONFIG.apiKey
                        && String(window.FB_CONFIG.apiKey).indexOf('ضع_')<0;
 
 function startLocal(msg){
-  MODE='local'; CAN_WRITE=true; ROLE='admin';
+  MODE='local'; CAN_WRITE=true; setRealRole('admin');
   lsLoad(); normalize();
   try{CAR.bio=localStorage.getItem(LS+'.bio')==='1';}catch(e){}
   if(!ITEMS.length)ITEMS=DEFAULT_ITEMS.map(i=>Object.assign({lastKm:null,lastDate:''},i));
@@ -1048,7 +1085,7 @@ async function attachCar(){
     const o=$('#luOut'); if(o)o.onclick=doLogout;
     return;
   }
-  ROLE=r; MODE='db'; CAN_WRITE=true; hideLogin();
+  setRealRole(r); MODE='db'; CAN_WRITE=true; hideLogin();
 
   /* خروج إجباري لكل الأجهزة */
   let lastForce=0; try{lastForce=+(localStorage.getItem(LS+'.force')||0);}catch(e){}
@@ -1067,9 +1104,10 @@ async function attachCar(){
     if(d.perms)mergePerms(d.perms);
     USERS=usersFromCar(d);
     healCarMaps(d);
-    const nr=roleOf(d); if(nr)ROLE=nr;
+    /* التحديث من السيرفر مابيلغيش وضع التجربة؛ ولو المدير شالك تخرج */
+    const nr=roleOf(d); if(!nr){doLogout();return;} setRealRole(nr);
     LOADED.car=1; render();
-  },e=>console.warn(e)));
+  },e=>{console.warn(e); if(e&&e.code==='permission-denied')doLogout();}));
 
   UNSUB.push(carRef.collection('items').onSnapshot(s=>{
     ITEMS=s.docs.map(d=>Object.assign({id:d.id},d.data()));

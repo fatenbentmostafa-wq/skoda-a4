@@ -1,3 +1,74 @@
+// قواعد أمان صيانة سكودا A4 — تتضاف جوا match /databases/{database}/documents { ... }
+// جنب قواعد مصاريف البيت (مشروع masareef-elbeit). ماتستبدلش ملف القواعد كله.
+
+    // ═════════ صيانة سكودا A4 ═════════
+    function skCar(cid)   { return get(/databases/$(database)/documents/cars/$(cid)).data; }
+    function skEmail()    { return request.auth.token.get('email', ''); }
+    // صاحب البرنامج = مدير. غير كده لازم الإيميل والـ uid يكونوا متسجلين مع بعض في العربية
+    function skRole(c) {
+      return request.auth == null ? ''
+        : c.owner == request.auth.uid ? 'admin'
+        : c.get('uids', {}).get(skEmail(), '') == request.auth.uid
+            ? c.get('roles', {}).get(skEmail(), '') : '';
+    }
+    function skPerm(c, p) {
+      let r = skRole(c);
+      return r == 'admin' ? 'edit' : r == '' ? 'none' : c.get('perms', {}).get(r, {}).get(p, 'none');
+    }
+    function skMember(c) { return skRole(c) != ''; }
+    function skAdmin(c)  { return skRole(c) == 'admin'; }
+    // تعديل مستند العربية: المدير أي حاجة (ماعدا صاحب البرنامج)، والباقي العداد وبيانات العربية حسب الجدول
+    function skCarUpdateOk(c, n) {
+      let ks = n.diff(c).affectedKeys();
+      return n.owner == c.owner && (
+        skAdmin(c)
+        || (ks.hasOnly(['odo', 'odoDate', 'avg', 'nm', 'plate', 'year'])
+            && (!ks.hasAny(['odo', 'odoDate']) || skPerm(c, 'odo') == 'edit')
+            && (!ks.hasAny(['nm', 'plate', 'year']) || skPerm(c, 'car') == 'edit')
+            && (!ks.hasAny(['avg']) || skPerm(c, 'odo') == 'edit' || skPerm(c, 'car') == 'edit')
+            && n.odo is number && n.odo >= 0));
+    }
+
+    match /cars/{cid} {
+      allow get:    if request.auth != null && (resource == null || skMember(resource.data));
+      allow list:   if false;
+      allow create: if request.auth != null
+                    && request.resource.data.owner == request.auth.uid
+                    && request.resource.data.roles.keys().hasOnly([skEmail()]);
+      allow update: if skCarUpdateOk(resource.data, request.resource.data);
+      allow delete: if false;
+
+      match /items/{itemId} {
+        allow read:           if skMember(skCar(cid));
+        allow create, delete: if skPerm(skCar(cid), 'items') == 'edit';
+        // اللي بيسجّل غيار يحدّث «آخر مرة» بس
+        allow update: if skPerm(skCar(cid), 'items') == 'edit'
+          || (skPerm(skCar(cid), 'addlog') == 'edit'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastKm', 'lastDate']));
+      }
+      match /logs/{logId} {
+        allow read:   if skMember(skCar(cid));
+        allow create: if skPerm(skCar(cid), 'addlog') == 'edit'
+                      && request.resource.data.km is number && request.resource.data.km >= 0;
+        allow delete: if skPerm(skCar(cid), 'addlog') == 'edit';
+        allow update: if false;
+      }
+    }
+
+    match /carUsernames/{uname} {
+      allow get:    if true;     // اسم واحد بس — قبل تسجيل الدخول
+      allow list:   if false;    // محدش يجيب القائمة كلها
+      allow create: if request.auth != null && skAdmin(skCar(request.resource.data.car));
+      allow delete: if request.auth != null && skAdmin(skCar(resource.data.car));
+      allow update: if false;
+    }
+    match /carLogins/{uid} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == uid || skAdmin(skCar(resource.data.car)));
+      allow create, update: if request.auth != null && skAdmin(skCar(request.resource.data.car));
+      allow delete:         if request.auth != null && skAdmin(skCar(resource.data.car));
+    }
+    // ═════════ نهاية صيانة سكودا ═════════
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  مهم جدًا — اقرا ده الأول                                            ║
 ║                                                                      ║

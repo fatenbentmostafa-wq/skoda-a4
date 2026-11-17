@@ -699,6 +699,13 @@ function render(){
   $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
   /* اسم الشخص الداخل بدل «المدير/محرر/مشاهد» — وفي وضع التجربة بيبان الدور */
   $('#hWho').textContent=PREVIEW?(ROLE_NM[ROLE]||'')+' (تجربة)':(MODE==='db'&&MY_DISPLAY?MY_DISPLAY:(ROLE_NM[ROLE]||''));
+  /* الصفحة اللي اتقفلت عليك أيقونتها بتختفي من تحت لحظيًا، وترجع أول ما المدير يفتحهالك */
+  const TABP={home:'maint',log:'log',done:'done'};
+  $$('nav.tabs button').forEach(b=>{ const pr=TABP[b.dataset.tab]; b.style.display=(pr&&!canSee(pr))?'none':''; });
+  if(TABP[TAB]&&!canSee(TABP[TAB])){
+    TAB=['home','log','done'].find(t=>canSee(TABP[t]))||'cfg';
+    if(!$('#ov').classList.contains('hide')) close_();
+  }
   /* الصفحات الفرعية بتنوّر التاب بتاعها */
   const navOn=TAB==='users'?'cfg':TAB==='notifs'?'':TAB;
   $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===navOn));

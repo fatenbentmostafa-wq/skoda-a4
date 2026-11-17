@@ -944,9 +944,10 @@ function loginForm(){
   return '<label class="f"><span>اسم المستخدم</span><input id="luU" autocomplete="username" placeholder="اسم المستخدم"></label>'
     +'<label class="f"><span>كلمة السر</span><input id="luP" type="password" autocomplete="current-password" placeholder="••••••"></label>'
     +'<button class="btn block" id="luGo">دخول</button>'
-    +'<div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:12px">'
+    /* جوا الأبليكشن دخول جوجل بيخرج لكروم ومابيرجعش — بنخفيه */
+    +(IS_APP?'':'<div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:12px">'
     +'<span style="flex:1;height:1px;background:var(--line)"></span>أو<span style="flex:1;height:1px;background:var(--line)"></span></div>'
-    +'<button class="btn ghost block" id="luG">الدخول بحساب جوجل</button>'
+    +'<button class="btn ghost block" id="luG">الدخول بحساب جوجل</button>')
     +'<div id="luErr" class="note" style="display:none;margin-top:12px"></div>'
     +'<button class="btn ghost block" id="luOff" style="margin-top:14px;border:0;color:var(--muted);font-size:12.5px">استخدام من غير حساب (على الجهاز ده بس)</button>';
 }

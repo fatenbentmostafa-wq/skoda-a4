@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: android-build
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,17 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Capacitor 8 (زي مصاريف البيت) محتاج Node 22 و Java 21
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: install deps
-        run: npm install
+        run: npm install --no-audit --no-fund --legacy-peer-deps
 
       - name: prepare web folder
         run: |
@@ -47,12 +52,13 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
       - name: app icon and splash
+        continue-on-error: true
         run: |
           mkdir -p assets
           cp ../icon.png assets/icon.png 2>/dev/null || cp ../app-512.png assets/icon.png 2>/dev/null || true
           cp ../splash.png assets/splash.png 2>/dev/null || true
           cp ../splash-dark.png assets/splash-dark.png 2>/dev/null || true
-          npx @capacitor/assets generate --android --assetPath assets || true
+          npx --yes @capacitor/assets@3 generate --android --assetPath assets || true
 
       - name: decode keystore
         env:
@@ -64,6 +70,10 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: node scripts/patch-android.js
+
+      # البصمة وزرار الرجوع والمشاركة
+      - name: sync plugins
+        run: npx cap sync android
 
       - name: build apk
         env:

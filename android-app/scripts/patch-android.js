@@ -71,4 +71,24 @@ if (process.env.ANDROID_KEYSTORE_PASSWORD && g.indexOf("signingConfigs") < 0) {
 }
 fs.writeFileSync(GRADLE, g);
 
+/* 4) أيقونة البرنامج من app.png اللي في جذر المشروع */
+const ICON = path.join(ROOT, "..", "app.png");
+if (fs.existsSync(ICON)) {
+  const RES = path.join(AND, "app/src/main/res");
+  const img = fs.readFileSync(ICON);
+  fs.readdirSync(RES).forEach(function (d) {
+    if (d.indexOf("mipmap") !== 0) return;
+    const dir = path.join(RES, d);
+    if (d.indexOf("anydpi") >= 0) {
+      fs.readdirSync(dir).forEach(function (f) { fs.unlinkSync(path.join(dir, f)); });
+      try { fs.rmdirSync(dir); } catch (e) {}
+      return;
+    }
+    ["ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"].forEach(function (n) {
+      try { fs.writeFileSync(path.join(dir, n), img); } catch (e) {}
+    });
+  });
+  console.log("+ icon");
+}
+
 console.log("android project patched - version 1.0." + run);

@@ -264,6 +264,8 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 .ishd{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .ishic{flex:0 0 auto;font-size:34px;line-height:1}
 .ishic img{width:56px;height:56px;border-radius:15px;object-fit:contain;display:block}
+.iedit{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:15px;cursor:pointer;line-height:1}
+.iedit.on{border-color:var(--em2);background:rgba(23,166,115,.16)}
 .ishnm{font-size:18px;font-weight:700;line-height:1.3}
 .nxlbl{font-size:12.5px;color:var(--muted);margin:0 2px 8px}
 .nxt{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -423,7 +425,10 @@ let ROLE='admin';                 // الدور المعروض على الشاش
 let REAL_ROLE='admin';            // الدور الحقيقي من Firebase
 let PREVIEW=null;                 // دور التجربة (للمدير بس) — null يعني مفيش تجربة
 function setRealRole(r){ REAL_ROLE=r; ROLE=PREVIEW||r; }
-let TAB='home', SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
+/* بعد التحديث/المزامنة البرنامج يرجع على نفس الصفحة اللي كنت فيها */
+function reloadKeep(){ try{ sessionStorage.setItem('sk.tab',TAB==='notifs'?(PREV_TAB||'home'):TAB); }catch(e){} location.reload(); }
+let TAB=(()=>{ try{ const t=sessionStorage.getItem('sk.tab'); sessionStorage.removeItem('sk.tab');
+  return /^(home|log|done|cfg|users)$/.test(t||'')?t:'home'; }catch(e){ return 'home'; } })(), SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
 let PREV_TAB='home';              // الصفحة اللي كنت فيها قبل الإشعارات
 let ADD_MODE='pw';                // إضافة مستخدم: pw = اسم مستخدم وباسورد · google = حساب جوجل
 let EVENTS=[];                    // سجل التعديلات من السيرفر (الجرس)
@@ -1112,7 +1117,9 @@ function shItem(id,ro){
   /* الرأس: نفس صورة البند اللي برا + الاسم + كل قد إيه */
   let h='<div class="ishd"><span class="ishic">'+icOf(it)+'</span>'
    +'<div style="flex:1;min-width:0"><div class="ishnm">'+esc(it.nm)+'</div>'
-   +'<div class="tiny" style="margin:2px 0 0">'+esc(every.join(' أو ')||'بدون مدة محددة')+'</div></div>'+st+'</div>';
+   +'<div class="tiny" style="margin:2px 0 0">'+esc(every.join(' أو ')||'بدون مدة محددة')+'</div></div>'
+   +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+st
+   +(!ro&&canEdit('items')?'<button class="iedit" id="iEd" type="button" aria-label="تعديل الميعاد">✏️</button>':'')+'</div></div>';
   /* الجاي: مربع للعداد ومربع للتاريخ — أيهما ييجي الأول */
   const boxes=[];
   if(s.nextKm!=null){ const c=s.leftKm<=0?'bad':s.leftKm<=WARN_KM?'warn':'ok';
@@ -1133,9 +1140,9 @@ function shItem(id,ro){
      +((it.lastKm!=null&&it.lastKm!==''&&it.lastDate)?' · ':'')+(it.lastDate?fmtDate(it.lastDate):'')+'</div>';
   h+='<div style="height:12px"></div>';
   if(!ro&&it.tip) h+='<div class="tiny" style="margin:0 0 10px">💡 '+esc(it.tip)+'</div>';
-  if(!ro && canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
+  /* تعديل الميعاد مستخبي — بيظهر بس لما تدوس على ✏️ */
   if(!ro && canEdit('items')){
-    h+='<div class="card"><h3 style="font-size:13px">تعديل الميعاد</h3><div class="grid2">'
+    h+='<div class="card" id="iEdC" style="display:none"><h3 style="font-size:13px">تعديل الميعاد</h3><div class="grid2">'
      +'<label class="f"><span>كل كام كم</span><input id="eK" inputmode="numeric" value="'+esc(it.km||0)+'"></label>'
      +'<label class="f"><span>كل كام شهر</span><input id="eM" inputmode="numeric" value="'+esc(it.mo||0)+'"></label>'
      +'<label class="f"><span>آخر مرة — العداد</span><input id="eLK" inputmode="numeric" value="'+esc(it.lastKm==null?'':it.lastKm)+'"></label>'
@@ -1154,7 +1161,8 @@ function shItem(id,ro){
   h+='<div class="acts"><button class="btn ghost" id="iX">إغلاق</button></div>';
   open_(h);
   $('#iX').onclick=close_;
-  const lg=$('#iLog'); if(lg)lg.onclick=()=>{close_();shLog(id);};
+  const ed=$('#iEd'); if(ed)ed.onclick=()=>{ const c=$('#iEdC'); const show=c.style.display==='none';
+    c.style.display=show?'':'none'; ed.classList.toggle('on',show); if(show) try{ c.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} };
   const sv=$('#iSave'); if(sv)sv.onclick=()=>{
     saveItem(Object.assign({},it,{
       km:parseInt($('#eK').value,10)||0, mo:parseInt($('#eM').value,10)||0,
@@ -1709,7 +1717,7 @@ function applyUpdate(){
   /* مايطلبش البصمة تاني بسبب التحديث بس */
   try{ if(!lockShown()) sessionStorage.setItem(LS+'.nolock',String(Date.now())); }catch(e){}
   try{ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{}); }catch(e){}
-  location.reload();
+  reloadKeep();
 }
 /* زرار التحديث: يجيب آخر داتا من السيرفر، ولو فيه نسخة جديدة من البرنامج يحدّثه */
 async function refreshNow(){
@@ -1739,7 +1747,7 @@ async function syncNow(btn){
       carRef.collection('logs').get({source:'server'})]).catch(()=>{});
   }
   toast('اتزامن ✓ — بعيد تحميل البرنامج');
-  setTimeout(()=>{ try{ sessionStorage.setItem(LS+'.nolock',String(Date.now())); }catch(e){} location.reload(); },700);
+  setTimeout(()=>{ try{ sessionStorage.setItem(LS+'.nolock',String(Date.now())); }catch(e){} reloadKeep(); },700);
 }
 
 /* ── الإقلاع ── */

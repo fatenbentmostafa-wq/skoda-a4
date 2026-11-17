@@ -60,10 +60,13 @@ jobs:
           cp ../splash-dark.png assets/splash-dark.png 2>/dev/null || true
           npx --yes @capacitor/assets@3 generate --android --assetPath assets || true
 
+      # مفتاح توقيع ثابت: عشان التحديث يتثبت فوق القديم، ودخول جوجل يشتغل (بصمته متسجلة في Firebase)
       - name: decode keystore
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-        run: if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"; fi
+        run: |
+          if [ -z "$KS" ]; then echo "::error::ضيف ANDROID_KEYSTORE_B64 و ANDROID_KEYSTORE_PASSWORD و ANDROID_KEY_ALIAS في Settings > Secrets > Actions"; exit 1; fi
+          echo "$KS" | tr -d '\r\n\t ' | base64 -d > "$RUNNER_TEMP/release.keystore"
 
       - name: patch project
         env:
@@ -80,7 +83,7 @@ jobs:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           cd android
           chmod +x gradlew

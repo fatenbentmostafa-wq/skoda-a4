@@ -243,6 +243,29 @@ nav.tabs button.on{color:var(--em2)}
 html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 .lockic{width:58px;height:58px;border-radius:17px;background:#123a2e;display:grid;place-items:center;font-size:28px;flex:0 0 auto}
 .lockrow{display:flex;gap:12px;align-items:flex-start}
+/* ===== نافذة البند: الجاي واضح ===== */
+.ishd{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ishic{flex:0 0 auto;font-size:34px;line-height:1}
+.ishic img{width:56px;height:56px;border-radius:15px;object-fit:contain;display:block}
+.ishnm{font-size:18px;font-weight:700;line-height:1.3}
+.nxlbl{font-size:12.5px;color:var(--muted);margin:0 2px 8px}
+.nxt{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.nxt.one{grid-template-columns:1fr}
+.nxb{background:#0b1a16;border:1px solid var(--line);border-radius:14px;padding:12px 13px}
+.nxb .l{font-size:12px;color:var(--muted)}
+.nxb .v{font-size:23px;font-weight:700;margin:4px 0 2px;font-variant-numeric:tabular-nums;line-height:1.2}
+.nxb .s{font-size:12px;color:var(--muted)}
+.nxb.ok .v{color:#4fd3a2}
+.nxb.bad{border-color:#4a2a28;background:#1d1413} .nxb.bad .v,.nxb.bad .s{color:#ff9d9a}
+.nxb.warn{border-color:#473c1f;background:#1c1a11} .nxb.warn .v,.nxb.warn .s{color:var(--gold2)}
+.lastln{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+/* ===== اختيار البند بالصور (تسجيل غيار) ===== */
+.pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;max-height:300px;overflow:auto;padding:2px}
+.pk1{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 4px 8px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;cursor:pointer;font-family:inherit;color:var(--txt);font-size:11.5px;line-height:1.3;text-align:center}
+.pk1 .ic{font-size:28px;line-height:1}
+.pk1 .ic img{width:42px;height:42px;object-fit:contain;border-radius:10px;display:block}
+.pk1.on{border-color:var(--em2);background:rgba(23,166,115,.16);box-shadow:inset 0 0 0 1px var(--em2)}
 </style>
 </head>
 <body>
@@ -1019,22 +1042,33 @@ function shItem(id,ro){
   const mine=LOGS.filter(l=>l.itemId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const every=[]; if(Number(it.km)>0)every.push('كل '+nf(it.km)+' كم');
   if(Number(it.mo)>0)every.push('كل '+fmtDur(Math.round(it.mo*30.44)));
-  let st=s.st==='bad'?'<span class="pill" style="background:#3a1e1d;color:#ff9d9a">متأخر</span>'
-       :s.st==='warn'?'<span class="pill" style="background:#38311a;color:#f0cc6a">قرّب ميعاده</span>'
-       :s.st==='ok'?'<span class="pill">تمام</span>':'<span class="pill">مش مسجّل</span>';
-  let h='<h3><span class="ic">'+icOf(it)+'</span>'+esc(it.nm)+'</h3>'
-   +'<div style="margin-bottom:10px">'+st+'</div>'
-   +'<div class="card" style="margin-bottom:10px"><div class="ln" style="color:var(--muted);font-size:12.5px;line-height:2">'
-   +'الميعاد: '+esc(every.join(' أو ')||'بدون مدة محددة')+'<br>'
-   +'آخر مرة: '+((it.lastKm!=null&&it.lastKm!=='')?nf(it.lastKm)+' كم':'—')+(it.lastDate?' · '+fmtDate(it.lastDate):'')+'<br>'
-   +'الجاي: '+(s.nextKm!=null?nf(s.nextKm)+' كم':'—')+(s.nextDate?' أو '+fmtDate(isoOf(s.nextDate)):'')
-   +(s.leftKm!=null?'<br>'+(s.leftKm>=0?'فاضل: '+nf(s.leftKm)+' كم'+(s.estDays!=null?' (≈ '+fmtDur(s.estDays)+')':'')
-                                      :'فات بـ '+nf(-s.leftKm)+' كم'):'')
-   +(s.leftDays!=null?'<br>'+(s.leftDays>=0?'فاضل بالوقت: '+fmtDur(s.leftDays):'فات بالوقت: '+fmtDur(s.leftDays)):'')
-   +'</div>'
-   +'<div class="bar"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div></div>'
-   +(it.tip?'<div class="tiny" style="margin:-4px 0 10px">💡 '+esc(it.tip)+'</div>':'');
-  if(ro) h+='<div class="tiny" style="margin:4px 0 10px">للتسجيل أو تعديل الميعاد روح صفحة «السجل».</div>';
+  const st=s.st==='bad'?'<span class="pill bad">متأخر</span>'
+       :s.st==='warn'?'<span class="pill warn">قرّب ميعاده</span>'
+       :s.st==='ok'?'<span class="pill">تمام</span>':'<span class="pill unknown">مش مسجّل</span>';
+  /* الرأس: نفس صورة البند اللي برا + الاسم + كل قد إيه */
+  let h='<div class="ishd"><span class="ishic">'+icOf(it)+'</span>'
+   +'<div style="flex:1;min-width:0"><div class="ishnm">'+esc(it.nm)+'</div>'
+   +'<div class="tiny" style="margin:2px 0 0">'+esc(every.join(' أو ')||'بدون مدة محددة')+'</div></div>'+st+'</div>';
+  /* الجاي: مربع للعداد ومربع للتاريخ — أيهما ييجي الأول */
+  const boxes=[];
+  if(s.nextKm!=null){ const c=s.leftKm<=0?'bad':s.leftKm<=WARN_KM?'warn':'ok';
+    boxes.push('<div class="nxb '+c+'"><div class="l">📏 عند العداد</div><div class="v">'+nf(s.nextKm)+'</div>'
+      +'<div class="s">كم · '+(s.leftKm>=0?'فاضل '+nf(s.leftKm)+(s.estDays!=null?' (≈ '+fmtDur(s.estDays)+')':''):'فات بـ '+nf(-s.leftKm))+'</div></div>'); }
+  if(s.nextDate){ const c=s.leftDays<=0?'bad':s.leftDays<=WARN_DAYS?'warn':'ok';
+    boxes.push('<div class="nxb '+c+'"><div class="l">📅 بتاريخ</div><div class="v">'+fmtDate(isoOf(s.nextDate))+'</div>'
+      +'<div class="s">'+(s.leftDays>=0?'فاضل '+fmtDur(s.leftDays):'فات بـ '+fmtDur(s.leftDays))+'</div></div>'); }
+  if(boxes.length){
+    h+='<div class="nxlbl">هيتغير المرة الجاية'+(boxes.length>1?' — أيهما ييجي الأول':'')+':</div>'
+     +'<div class="nxt'+(boxes.length>1?'':' one')+'">'+boxes.join('')+'</div>'
+     +'<div class="bar" style="margin:0 0 12px"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div>';
+  } else {
+    h+='<div class="note" style="margin-bottom:12px">لسه مسجّلتش آخر مرة اتعمل — سجّلها عشان أحسبلك الميعاد الجاي.</div>';
+  }
+  const hasLast=(it.lastKm!=null&&it.lastKm!=='')||it.lastDate;
+  if(hasLast) h+='<div class="lastln">آخر مرة: '+((it.lastKm!=null&&it.lastKm!=='')?nf(it.lastKm)+' كم':'')
+     +((it.lastKm!=null&&it.lastKm!==''&&it.lastDate)?' · ':'')+(it.lastDate?fmtDate(it.lastDate):'')+'</div>';
+  h+='<div style="height:12px"></div>';
+  if(!ro&&it.tip) h+='<div class="tiny" style="margin:0 0 10px">💡 '+esc(it.tip)+'</div>';
   if(!ro && canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
   if(!ro && canEdit('items')){
     h+='<div class="card"><h3 style="font-size:13px">تعديل الميعاد</h3><div class="grid2">'
@@ -1046,9 +1080,10 @@ function shItem(id,ro){
      +'<label class="sw"><input type="checkbox" id="eOn" '+(it.on!==false?'checked':'')+'><i></i></label></div>'
      +'<div class="acts"><button class="btn ghost" id="iDel">حذف البند</button><button class="btn" id="iSave">حفظ</button></div></div>';
   }
-  if(mine.length){
+  /* تاريخ البند بيظهر في السجل بس — من صفحة الصيانة النافذة بسيطة */
+  if(!ro&&mine.length){
     h+='<div class="sec"><h2>تاريخ البند</h2></div>';
-    mine.forEach(l=>{h+='<div class="row"><div class="ic">🧾</div><div style="flex:1"><div class="nm" style="font-size:13px">'
+    mine.forEach(l=>{h+='<div class="row"><div class="ic">'+icOf(it)+'</div><div style="flex:1"><div class="nm" style="font-size:13px">'
       +nf(l.km)+' كم · '+fmtDate(l.date)+'</div><div class="ln">'+esc([l.by,l.place,l.notes].filter(Boolean).join(' · '))+'</div></div>'
       +(canSee('costs')&&Number(l.cost)?'<div class="end"><div class="cost">'+nf(l.cost)+' ج</div></div>':'')+'</div>';});
   }
@@ -1067,10 +1102,14 @@ function shItem(id,ro){
 
 /* ---- تسجيل غيار ---- */
 function shLog(itemId){
-  const opts=ITEMS.slice().sort((a,b)=>(a.ord||99)-(b.ord||99))
-    .map(i=>'<option value="'+esc(i.id)+'"'+(i.id===itemId?' selected':'')+'>'+esc(i.ic+' '+i.nm)+'</option>').join('');
+  /* اختيار البند بنفس الصور اللي في الصيانة — زيت الموتور أول واحد */
+  const list=ITEMS.filter(i=>i.on!==false||i.id===itemId).sort((a,b)=>(a.id==='oil'?-1:b.id==='oil'?1:(a.ord||99)-(b.ord||99)));
+  const sel=itemId||'';
+  const tilesH=list.map(i=>'<button type="button" class="pk1'+(i.id===sel?' on':'')+'" data-pick="'+esc(i.id)+'">'
+    +'<span class="ic">'+icOf(i)+'</span><span>'+esc(i.nm)+'</span></button>').join('');
   open_('<h3><span class="ic">✅</span>تسجيل غيار</h3>'
-  +'<label class="f"><span>البند</span><select id="lI">'+opts+'</select></label>'
+  +'<label class="f"><span>اختار البند</span></label><input type="hidden" id="lI" value="'+esc(sel)+'">'
+  +'<div class="pick">'+tilesH+'</div>'
   +'<div class="grid2"><label class="f"><span>العداد وقتها</span><input id="lK" inputmode="numeric" value="'+esc(CAR.odo||'')+'"></label>'
   +'<label class="f"><span>التاريخ</span><input id="lD" type="date" value="'+todayISO()+'"></label></div>'
   +'<div class="grid2"><label class="f"><span>مين عملها</span><input id="lB" placeholder="الاسم"></label>'
@@ -1079,6 +1118,9 @@ function shLog(itemId){
   +'<label class="f"><span>ملاحظات</span><textarea id="lN" placeholder="نوع الزيت، الماركة، أي حاجة مهمة…"></textarea></label>'
   +'<div class="acts"><button class="btn ghost" id="lX">إلغاء</button><button class="btn gold" id="lS">حفظ</button></div>');
   $('#lX').onclick=close_;
+  $$('#sheet [data-pick]').forEach(b=>b.onclick=()=>{
+    $('#lI').value=b.dataset.pick; $$('#sheet .pk1').forEach(x=>x.classList.toggle('on',x===b)); });
+  const on=$('#sheet .pk1.on'); if(on) try{ on.scrollIntoView({block:'nearest'}); }catch(e){}
   $('#lS').onclick=async()=>{
     const it=itemById($('#lI').value), km=parseInt($('#lK').value,10);
     if(!it){alert('اختار البند');return;}

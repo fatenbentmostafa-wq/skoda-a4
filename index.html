@@ -379,17 +379,17 @@ if(NATIVE){ document.documentElement.classList.add('native');
    حط رابط/ملف الصورة في icImg وهي تتعرض مكان الإيموچي تلقائيًا. */
 const I='';
 const DEFAULT_ITEMS=[
- {id:'oil',      img:I+'oil.png',      ic:'🛢️', nm:'زيت الموتور + الفلتر', km:5000,  mo:6,  on:true, ord:1,  tip:'المعدني كل 5000، الصناعي يوصل 10000'},
+ {id:'oil',      img:I+'oil.png',      ic:'🛢️', nm:'زيت موتور وفلتر', km:5000,  mo:6,  on:true, ord:1,  tip:'المعدني كل 5000، الصناعي يوصل 10000'},
  {id:'plugs',    img:I+'plugs.png',    ic:'🔌', nm:'البوجيهات',            km:30000, mo:0,  on:true, ord:2,  tip:'النحاس 30 ألف، الإريديوم 60-90 ألف'},
  {id:'timing',   img:I+'belt.png',     ic:'⛓️', nm:'سير الكاتينة',         km:90000, mo:60, on:true, ord:3,  tip:'أهم بند — لو قطع يفضي الموتور'},
  {id:'waterpump',img:I+'waterpump.png',ic:'💧', nm:'طرمبة المياه',         km:90000, mo:0,  on:true, ord:4,  tip:'الأفضل تتغير مع سير الكاتينة'},
- {id:'airfil',   img:I+'airfil.png',   ic:'🌀', nm:'فلتر الهوا',           km:15000, mo:0,  on:true, ord:5,  tip:''},
+ {id:'airfil',   img:I+'airfil.png',   ic:'🌀', nm:'فلتر هواء',           km:15000, mo:0,  on:true, ord:5,  tip:''},
  {id:'fuelfil',  img:I+'fuelfil.png',  ic:'⛽', nm:'فلتر البنزين',         km:30000, mo:0,  on:true, ord:6,  tip:''},
  {id:'cabfil',   img:I+'cabfil.png',   ic:'❄️', nm:'فلتر التكييف',         km:15000, mo:12, on:true, ord:7,  tip:''},
- {id:'acgas',    img:I+'acgas.png',    ic:'❄️', nm:'غاز التكييف',          km:0,     mo:24, on:true, ord:8,  tip:'يتشحن لما التبريد يضعف'},
- {id:'gearoil',  img:I+'gearoil.png',  ic:'⚙️', nm:'زيت الفتيس',           km:60000, mo:0,  on:true, ord:9,  tip:'الأوتوماتيك كل 60 ألف'},
- {id:'padsF',    img:I+'pads.png',     ic:'🧱', nm:'تيل الفرامل الأمامي',  km:35000, mo:0,  on:true, ord:10, tip:''},
- {id:'padsR',    img:I+'pads.png',     ic:'🧱', nm:'تيل الفرامل الخلفي',   km:60000, mo:0,  on:true, ord:11, tip:''},
+ {id:'acgas',    img:I+'acgas.png',    ic:'❄️', nm:'فريون',          km:0,     mo:24, on:true, ord:8,  tip:'يتشحن لما التبريد يضعف'},
+ {id:'gearoil',  img:I+'gearoil.png',  ic:'⚙️', nm:'زيت فيتيس',           km:60000, mo:0,  on:true, ord:9,  tip:'الأوتوماتيك كل 60 ألف'},
+ {id:'padsF',    img:I+'pads.png',     ic:'🧱', nm:'تيل أمامي',  km:35000, mo:0,  on:true, ord:10, tip:''},
+ {id:'padsR',    img:I+'pads.png',     ic:'🧱', nm:'تيل خلفي',   km:60000, mo:0,  on:true, ord:11, tip:''},
  {id:'battery',  img:I+'battery.png',  ic:'🔋', nm:'البطارية',             km:0,     mo:36, on:true, ord:12, tip:''},
  {id:'tiresF',   img:I+'tires.png',    ic:'🛞', nm:'كاوتش أمامي',          km:50000, mo:60, on:true, ord:13, tip:'يتغير بالعمر كمان'},
  {id:'tiresR',   img:I+'tires.png',    ic:'🛞', nm:'كاوتش خلفي',           km:50000, mo:60, on:true, ord:14, tip:'يتغير بالعمر كمان'}
@@ -806,7 +806,7 @@ function vDone(){
   if(!logs.length) h+='<div class="empty"><span class="big">📋</span>لسه مفيش عمليات مسجّلة.</div>';
   logs.forEach(l=>{const it=itemById(l.itemId);
     h+='<div class="row"'+(it?' data-item="'+esc(it.id)+'" style="cursor:pointer"':'')+'><div class="ic">'+icOf(it)+'</div>'
-     + '<div style="flex:1;min-width:0"><div class="nm">'+esc(l.nm||(it&&it.nm)||'صيانة')+(it?' <span style="color:var(--muted);font-weight:400">›</span>':'')+'</div>'
+     + '<div style="flex:1;min-width:0"><div class="nm">'+esc((it&&it.nm)||l.nm||'صيانة')+(it?' <span style="color:var(--muted);font-weight:400">›</span>':'')+'</div>'
      + '<div class="ln">'+nf(l.km)+' كم · '+fmtDate(l.date)
      +  (l.by?' · <span class="pill">'+esc(l.by)+'</span>':'')
      +  (l.place?'<br>📍 '+esc(l.place):'')+(l.notes?'<br>'+esc(l.notes):'')+'</div></div>'

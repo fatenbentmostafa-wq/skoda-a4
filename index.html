@@ -178,6 +178,8 @@ nav.tabs button.on{color:var(--em2)}
 .ov{position:fixed;inset:0;background:rgba(2,8,6,.75);backdrop-filter:blur(4px);z-index:60;
   display:flex;align-items:flex-end;justify-content:center}
 .ov.hide{display:none}
+html.nosc,html.nosc body{overflow:hidden!important;overscroll-behavior:none}
+.ov,.ov .sheet{overscroll-behavior:contain}
 .sheet{background:var(--bg2);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;
   width:100%;max-width:760px;max-height:93vh;overflow:auto;
   padding:14px 16px calc(18px + env(safe-area-inset-bottom))}
@@ -962,8 +964,9 @@ async function shareAppMore(){
 }
 
 /* ══════════════ النوافذ ══════════════ */
-function open_(html){$('#sheet').innerHTML='<div class="handle"></div>'+html;$('#ov').classList.remove('hide');}
-function close_(){$('#ov').classList.add('hide');}
+function open_(html){$('#sheet').innerHTML='<div class="handle"></div>'+html;$('#ov').classList.remove('hide');
+  document.documentElement.classList.add('nosc'); $('#sheet').scrollTop=0;}
+function close_(){$('#ov').classList.add('hide'); document.documentElement.classList.remove('nosc');}
 $('#ov').addEventListener('click',e=>{if(e.target.id==='ov')close_();});
 
 function shOdo(){

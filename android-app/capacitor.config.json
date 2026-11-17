@@ -6,7 +6,16 @@
     "url": "https://fatenbentmostafa-wq.github.io/skoda-a4/",
     "cleartext": false,
     "errorPath": "offline.html",
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "allowNavigation": [
+      "accounts.google.com",
+      "*.google.com",
+      "apis.google.com",
+      "masareef-elbeit.firebaseapp.com",
+      "*.firebaseapp.com",
+      "*.googleapis.com",
+      "*.gstatic.com"
+    ]
   },
   "android": {
     "allowMixedContent": false,

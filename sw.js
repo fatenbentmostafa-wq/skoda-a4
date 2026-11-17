@@ -1,6 +1,6 @@
 /* SKODA A4 — Service Worker
    كل ما تعدّل في index.html زوّد الرقم ده واحد: v1 -> v2 -> v3 ... */
-const VERSION = "v8";
+const VERSION = "v9";
 const CACHE = "skoda-" + VERSION;
 
 /* الملفات اللي بتتخزن للاستخدام من غير نت */

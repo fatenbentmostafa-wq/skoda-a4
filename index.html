@@ -691,7 +691,10 @@ const icOf=it=>{
 };
 
 /* ══════════════ العرض ══════════════ */
+/* الصفحة بتطلع لفوق بس لما تتنقل لصفحة تانية — التعديل والحفظ بيسيبوك مكانك */
+let _lastTab=null;
 function render(){
+  const keepY=window.scrollY||0, sameTab=(_lastTab===TAB);
   $('#hTtl').textContent=CAR.nm||'SKODA A4';
   $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
   /* اسم الشخص الداخل بدل «المدير/محرر/مشاهد» — وفي وضع التجربة بيبان الدور */
@@ -706,7 +709,8 @@ function render(){
   else if(TAB==='users'&&ROLE==='admin')vUsers();
   else if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else if(TAB==='done')vDone(); else {TAB='cfg';vCfg();}
   updateBell();
-  window.scrollTo(0,0);
+  if(sameTab&&_lastTab===TAB) window.scrollTo(0,keepY); else window.scrollTo(0,0);
+  _lastTab=TAB;
 }
 
 function vHome(){

@@ -30,8 +30,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
       - name: install deps
         run: npm install
 
@@ -45,15 +43,16 @@ jobs:
 
       - name: create android project
         run: npx cap add android || npx cap sync android
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
       - name: app icon and splash
         run: npx @capacitor/assets generate --android --assetPath resources || true
 
       - name: decode keystore
-        if: env.KS != ''
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-        run: echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"
+        run: if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"; fi
 
       - name: patch project
         env:

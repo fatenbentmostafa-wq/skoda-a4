@@ -409,12 +409,13 @@ const PERM_ROWS=[
  {p:'car',   nm:'بيانات العربية',      ed:1},
  {p:'costs', nm:'المصاريف والتكاليف',  ed:0},
  {p:'backup',nm:'النسخة الاحتياطية',   ed:1},
- {p:'share', nm:'إرسال البرنامج لحد',  ed:0}
+ {p:'share', nm:'إرسال البرنامج لحد',  ed:0},
+ {p:'notifs',nm:'الإشعارات واللوكيشن', ed:0}
 ];
 const DEF_PERMS={
-  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit',share:'edit'},
-  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',items:'none',car:'view',costs:'view',backup:'none',share:'view'},
-  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',items:'none',car:'none',costs:'none',backup:'none',share:'none'}
+  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit',share:'edit',notifs:'edit'},
+  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',items:'none',car:'view',costs:'view',backup:'none',share:'view',notifs:'none'},
+  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',items:'none',car:'none',costs:'none',backup:'none',share:'none',notifs:'none'}
 };
 const ROLE_NM={admin:'المدير',editor:'محرر',viewer:'مشاهد'};
 
@@ -522,6 +523,30 @@ function logEvent(t,title,body){
 let _permLogT=null;
 function logPermsLater(){ clearTimeout(_permLogT); _permLogT=setTimeout(()=>logEvent('perms','عدّل جدول الصلاحيات'),4000); }
 
+/* ══ اللوكيشن: كل ما حد يفتح البرنامج موقعه بيوصل للمدير في الجرس ══ */
+let CAR_OWNER='';
+const LOC_EVERY=10*60000;          /* مرة كل ١٠ دقايق على الأكتر */
+function locUrl(e){
+  if(!e||e.t!=='loc'||typeof e.lat!=='number'||typeof e.lng!=='number') return '';
+  const q=e.lat+','+e.lng;
+  return NATIVE?'geo:'+q+'?q='+q:'https://maps.google.com/?q='+q;
+}
+async function sendLocation(){
+  if(MODE!=='db'||!carRef||!fbUser||!CAR_OWNER||CAR_OWNER===fbUser.uid) return;
+  if(!navigator.geolocation) return;
+  try{ if(Date.now()-(+localStorage.getItem(LS+'.locAt')||0)<LOC_EVERY) return;
+       localStorage.setItem(LS+'.locAt',String(Date.now())); }catch(e){}
+  /* أول مرة الموبايل بيطلب الإذن — مانقفلش البرنامج بسببه */
+  try{ const st=navigator.permissions&&await navigator.permissions.query({name:'geolocation'});
+       if(!st||st.state!=='granted'){ allowAway(); setTimeout(()=>{awayOk=false;},30000); } }catch(e){}
+  navigator.geolocation.getCurrentPosition(p=>{
+    carRef.collection('events').add({t:'loc',title:'فتح البرنامج',body:'',
+      lat:+p.coords.latitude.toFixed(5),lng:+p.coords.longitude.toFixed(5),acc:Math.round(p.coords.accuracy||0),
+      by:fbUser.uid,name:MY_DISPLAY||MYEMAIL.split('@')[0],at:Date.now()}).catch(()=>{});
+  },()=>{ try{localStorage.removeItem(LS+'.locAt');}catch(e){} },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) sendLocation(); });
+
 const NF_KEY=LS+'.nf';
 let NF={seen:0,read:[],local:[]};
 try{ const r=JSON.parse(localStorage.getItem(NF_KEY)||'null'); if(r)NF=Object.assign(NF,r); }catch(e){}
@@ -535,14 +560,15 @@ function timeAgo(ms){ const m=Math.round((Date.now()-ms)/60000);
 
 function nfItems(){
   const me=fbUser&&fbUser.uid, read=NF.read;
-  const alerts=canSee('maint')?liveItems().map(it=>({it,s:itemState(it)})).filter(x=>x.s.st==='bad'||x.s.st==='warn')
+  const alerts=(canSee('maint')&&canSee('notifs'))?liveItems().map(it=>({it,s:itemState(it)})).filter(x=>x.s.st==='bad'||x.s.st==='warn')
     .sort((a,b)=>(a.s.st==='bad'?0:1)-(b.s.st==='bad'?0:1))
     .map(({it,s})=>{ const id='al:'+it.id+':'+(it.lastKm==null?'':it.lastKm)+':'+s.st;
       return {id,ic:icOf(it),cls:'alert',title:(s.st==='bad'?'محتاج صيانة دلوقتي: ':'قرّب ميعاده: ')+it.nm,
         body:shortStat(s),go:'home',unread:s.st==='bad'&&read.indexOf(id)<0}; }):[];
-  const feed=EVENTS.map(e=>({id:'ev:'+e.id,ic:e.t==='log'?'🧾':e.t==='odo'?'📏':e.t==='user'?'👤':e.t==='perms'?'🧮':e.t==='item'?'🧰':'✏️',
+  /* «البرنامج اتحدث» للكل؛ باقي الإشعارات واللوكيشن حسب جدول الصلاحيات */
+  const feed=(canSee('notifs')?EVENTS:[]).map(e=>({id:'ev:'+e.id,ic:e.t==='loc'?'📍':e.t==='log'?'🧾':e.t==='odo'?'📏':e.t==='user'?'👤':e.t==='perms'?'🧮':e.t==='item'?'🧰':'✏️',
       title:e.title,body:[e.name,e.body].filter(Boolean).join(' · ')+(e.at?' · '+timeAgo(e.at):''),at:e.at||0,
-      go:e.t==='log'?'done':e.t==='item'?'log':e.t==='odo'?'home':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
+      go:e.t==='log'?'done':e.t==='item'?'log':e.t==='odo'?'home':'',url:locUrl(e),act:locUrl(e)?'افتح على الخريطة':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
     .concat(NF.local.map(n=>Object.assign({},n,{body:(n.body||'')+(n.at?' · '+timeAgo(n.at):''),unread:read.indexOf(n.id)<0})))
     .sort((a,b)=>b.at-a.at);
   return {alerts,feed};
@@ -1591,6 +1617,7 @@ async function attachCar(){
     MY_DISPLAY=((d.names||{})[MYEMAIL])||MYNAME||MYEMAIL.split('@')[0];
     MY_LOGIN=((d.unames||{})[MYEMAIL])||MYEMAIL;
     healCarMaps(d);
+    if(!CAR_OWNER){ CAR_OWNER=d.owner||''; setTimeout(sendLocation,1500); }
     /* التحديث من السيرفر مابيلغيش وضع التجربة؛ ولو المدير شالك تخرج */
     const nr=roleOf(d); if(!nr){doLogout();return;} setRealRole(nr);
     LOADED.car=1; render();

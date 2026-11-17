@@ -1,6 +1,6 @@
 /* SKODA A4 — Service Worker
    كل ما تعدّل في index.html زوّد الرقم ده واحد: v1 -> v2 -> v3 ... */
-const VERSION = "v16";
+const VERSION = "v17";
 const CACHE = "skoda-" + VERSION;
 
 /* الملفات اللي بتتخزن للاستخدام من غير نت */
@@ -33,6 +33,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;      /* Firebase والخطوط تعدي عادي */
+  if (url.pathname.endsWith("/sw.js") || req.cache === "no-store") return;  /* فحص التحديث كل 5 ثواني: من السيرفر مباشرة */
 
   const isPage = req.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname.endsWith("/");
   if (isPage) {

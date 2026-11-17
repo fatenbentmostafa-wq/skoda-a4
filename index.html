@@ -210,7 +210,7 @@ nav.tabs button.on{color:var(--em2)}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><img src="app.png" alt="" onerror="this.replaceWith(document.createTextNode('🚗'))"></div>
+    <div class="brand"><img src="app.png" alt="SKODA"></div>
     <div style="flex:1;min-width:0">
       <div class="ttl" id="hTtl">SKODA A4</div>
       <div class="sub" id="hSub">صيانة العربية</div>
@@ -232,7 +232,7 @@ nav.tabs button.on{color:var(--em2)}
 <!-- شاشة الدخول -->
 <div class="login hide" id="login">
   <div class="lgbox">
-    <div class="lglogo"><img src="app.png" alt="" onerror="this.parentNode.style.display='grid';this.parentNode.style.placeItems='center';this.parentNode.style.fontSize='44px';this.replaceWith(document.createTextNode('🚗'))"></div>
+    <div class="lglogo"><img src="app.png" alt=""></div>
     <h2>صيانة سكودا A4</h2>
     <p class="lgsub">ادخل بحسابك عشان البيانات تتزامن بينك وبين اللي معاك</p>
     <div id="lgBody"></div>
@@ -464,7 +464,7 @@ function vHome(){
   $$('#view [data-a="odo"]').forEach(b=>b.onclick=shOdo);
   $$('#view [data-a="cam"]').forEach(b=>b.onclick=shCam);
   $$('#view [data-a="all"]').forEach(b=>b.onclick=()=>{SHOW_ALL=!SHOW_ALL;render();});
-  $('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id,true));
+  $$('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id,true));
 }
 /* صفحة الصيانة: أيقونة واسم البند بس — التفاصيل تتفتح بالضغط */
 function tiles(list){
@@ -954,7 +954,7 @@ function wireLogin(){
     g.disabled=true;
     try{ await AUTH.signInWithPopup(p); }
     catch(e){
-      if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'||e.code==='auth/cancelled-popup-request')){
+      if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')){
         try{ await AUTH.signInWithRedirect(p); return; }catch(e2){}
       }
       g.disabled=false;

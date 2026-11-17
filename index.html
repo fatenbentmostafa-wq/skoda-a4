@@ -912,6 +912,12 @@ function normalize(){
 /* ══════════════ Firebase ══════════════ */
 const CAR_ID='skodaA4';
 const SYNTH='@masareef-elbeit.firebaseapp.com';   /* إيميلات مخلّقة لحسابات اليوزر/الباسورد */
+/* جوا أبليكشن الأندرويد النافذة المنبثقة مابترجعش — بنستخدم التحويل بدالها */
+const IS_APP=(function(){ try{
+  if(window.Capacitor) return true;
+  const ua=navigator.userAgent||'';
+  return /\bwv\b/.test(ua) || (/Android/.test(ua) && !/Chrome\/\d+\.\d+\.\d+\.\d+ Mobile/.test(ua) && /Version\/\d/.test(ua));
+}catch(e){ return false; } })();
 let FS=null, AUTH=null, SEC=null, fbUser=null, carRef=null, UNSUB=[];
 let MYEMAIL='', MYNAME='', LOADED={car:0,items:0,logs:0};
 
@@ -952,6 +958,11 @@ function wireLogin(){
     const p=new firebase.auth.GoogleAuthProvider();
     p.setCustomParameters({prompt:'select_account'});
     g.disabled=true;
+    if(IS_APP){
+      try{ await AUTH.signInWithRedirect(p); }
+      catch(e){ g.disabled=false; loginErr('مقدرتش أدخل بجوجل — جرّب تاني'); }
+      return;
+    }
     try{ await AUTH.signInWithPopup(p); }
     catch(e){
       if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')){
@@ -1131,6 +1142,7 @@ async function checkVersion(){
   }catch(e){ startLocal(); return; }
 
   render();
+  AUTH.getRedirectResult().catch(e=>{ try{ loginErr('مقدرتش أدخل بجوجل — جرّب تاني'); }catch(x){} });
   AUTH.onAuthStateChanged(u=>{
     fbUser=u||null;
     if(!u){ unsubAll(); carRef=null; MODE='loading'; showLogin(); render(); return; }

@@ -1,0 +1,93 @@
+name: build android apk
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: install deps
+        run: npm install
+
+      - name: prepare web folder
+        run: |
+          mkdir -p www/icons
+          cp ../offline.html www/ 2>/dev/null || true
+          cp ../manifest.json www/ 2>/dev/null || true
+          cp -r ../icons/. www/icons/ 2>/dev/null || true
+          printf '%s' '<!doctype html><meta http-equiv="refresh" content="0;url=https://fatenbentmostafa-wq.github.io/skoda-a4/">' > www/index.html
+
+      - name: create android project
+        run: npx cap add android || npx cap sync android
+
+      - name: app icon and splash
+        run: npx @capacitor/assets generate --android --assetPath resources || true
+
+      - name: decode keystore
+        if: env.KS != ''
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: patch project
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: node scripts/patch-android.js
+
+      - name: build apk
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          chmod +x gradlew
+          if [ -n "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            ./gradlew assembleDebug --no-daemon
+          fi
+          find app/build/outputs/apk -name '*.apk' -exec cp {} ../skoda.apk \;
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skoda-apk
+          path: android-app/skoda.apk
+
+      - name: publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app
+          name: تطبيق صيانة سكودا - آخر نسخة
+          body: نزّل skoda.apk وثبّته فوق القديم. النسخة 1.0.${{ github.run_number }}
+          files: android-app/skoda.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

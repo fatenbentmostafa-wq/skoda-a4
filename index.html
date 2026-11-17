@@ -751,7 +751,8 @@ function vLog(){
   $('#view').innerHTML=h;
   const nb=$('#view [data-a="new"]'); if(nb)nb.onclick=()=>shLog(null);
   const ni=$('#view [data-a="ni"]'); if(ni)ni.onclick=shNewItem;
-  $$('#view .row[data-id]').forEach(r=>r.onclick=()=>shItem(r.dataset.id));
+  /* في السجل: الضغط على البند يفتح إدخال صيانة جديدة بس — التفاصيل كلها في «اللي اتعمل» */
+  $$('#view .row[data-id]').forEach(r=>r.onclick=()=>{ if(canEdit('addlog')) shLog(r.dataset.id); else shItem(r.dataset.id,true); });
   $$('#view [data-a="di"]').forEach(b=>b.onclick=e=>{e.stopPropagation();
     const it=itemById(b.dataset.id);
     if(confirm('تحذف بند «'+(it?it.nm:'')+'» نهائيًا؟'))delItem(b.dataset.id);});
@@ -773,8 +774,8 @@ function vDone(){
   h+='<div class="sec"><h2>🧾 اللي اتعمل</h2><span class="cnt">'+logs.length+'</span></div>';
   if(!logs.length) h+='<div class="empty"><span class="big">📋</span>لسه مفيش عمليات مسجّلة.</div>';
   logs.forEach(l=>{const it=itemById(l.itemId);
-    h+='<div class="row"><div class="ic">'+icOf(it)+'</div>'
-     + '<div style="flex:1;min-width:0"><div class="nm">'+esc(l.nm||(it&&it.nm)||'صيانة')+'</div>'
+    h+='<div class="row"'+(it?' data-item="'+esc(it.id)+'" style="cursor:pointer"':'')+'><div class="ic">'+icOf(it)+'</div>'
+     + '<div style="flex:1;min-width:0"><div class="nm">'+esc(l.nm||(it&&it.nm)||'صيانة')+(it?' <span style="color:var(--muted);font-weight:400">›</span>':'')+'</div>'
      + '<div class="ln">'+nf(l.km)+' كم · '+fmtDate(l.date)
      +  (l.by?' · <span class="pill">'+esc(l.by)+'</span>':'')
      +  (l.place?'<br>📍 '+esc(l.place):'')+(l.notes?'<br>'+esc(l.notes):'')+'</div></div>'
@@ -785,6 +786,8 @@ function vDone(){
   const nb=$('#view [data-a="new"]'); if(nb)nb.onclick=()=>shLog(null);
   $$('#view [data-a="dl"]').forEach(b=>b.onclick=e=>{e.stopPropagation();
     if(confirm('تحذف العملية دي؟'))delLog(b.dataset.id);});
+  /* الضغط على العملية يفتح كل بيانات البند: الجاي، تعديل الميعاد، وتاريخه كله */
+  $$('#view .row[data-item]').forEach(r=>r.onclick=()=>shItem(r.dataset.item));
 }
 
 function vCfg(){

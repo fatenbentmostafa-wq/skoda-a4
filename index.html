@@ -405,6 +405,7 @@ const PERM_ROWS=[
  {p:'odo',   nm:'تحديث العداد',        ed:1},
  {p:'addlog',nm:'تسجيل غيار',          ed:1},
  {p:'log',   nm:'السجل والمواعيد',     ed:0},
+ {p:'done',  nm:'صفحة اللي اتعمل',     ed:0},
  {p:'items', nm:'تعديل البنود والمدد', ed:1},
  {p:'car',   nm:'بيانات العربية',      ed:1},
  {p:'costs', nm:'المصاريف والتكاليف',  ed:0},
@@ -413,9 +414,9 @@ const PERM_ROWS=[
  {p:'notifs',nm:'الإشعارات واللوكيشن', ed:0}
 ];
 const DEF_PERMS={
-  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit',share:'edit',notifs:'edit'},
-  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',items:'none',car:'view',costs:'view',backup:'none',share:'view',notifs:'none'},
-  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',items:'none',car:'none',costs:'none',backup:'none',share:'none',notifs:'none'}
+  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',done:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit',share:'edit',notifs:'edit'},
+  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',done:'view',items:'none',car:'view',costs:'view',backup:'none',share:'view',notifs:'none'},
+  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',done:'view',items:'none',car:'none',costs:'none',backup:'none',share:'none',notifs:'none'}
 };
 const ROLE_NM={admin:'المدير',editor:'محرر',viewer:'مشاهد'};
 
@@ -791,7 +792,7 @@ function vLog(){
 
 /* صفحة «اللي اتعمل»: كل الغيارات اللي اتسجلت والمصاريف */
 function vDone(){
-  if(!canSee('log')){$('#view').innerHTML='<div class="empty"><span class="big">🔒</span>مالكش صلاحية تشوف الصفحة دي.</div>';return;}
+  if(!canSee('done')){$('#view').innerHTML='<div class="empty"><span class="big">🔒</span>مالكش صلاحية تشوف الصفحة دي.</div>';return;}
   const logs=LOGS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.ts||0)-(a.ts||0));
   const money=canSee('costs');
   const total=logs.reduce((s,l)=>s+(Number(l.cost)||0),0);
@@ -801,7 +802,6 @@ function vDone(){
    + (money?'<div class="chip g"><b>'+nf(yr)+'</b><small>مصاريف السنة</small></div>'
           +'<div class="chip g"><b>'+nf(total)+'</b><small>الإجمالي</small></div>':'')
    + '</div>';
-  if(canEdit('addlog')) h+='<button class="btn block gold" data-a="new" style="margin-bottom:6px">＋ تسجيل غيار جديد</button>';
   h+='<div class="sec"><h2>🧾 اللي اتعمل</h2><span class="cnt">'+logs.length+'</span></div>';
   if(!logs.length) h+='<div class="empty"><span class="big">📋</span>لسه مفيش عمليات مسجّلة.</div>';
   logs.forEach(l=>{const it=itemById(l.itemId);

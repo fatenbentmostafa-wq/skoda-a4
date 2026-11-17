@@ -1,0 +1,24 @@
+{
+  "appId": "com.kareem.skoda",
+  "appName": "صيانة سكودا",
+  "webDir": "www",
+  "server": {
+    "url": "https://fatenbentmostafa-wq.github.io/skoda-a4/",
+    "cleartext": false,
+    "errorPath": "offline.html",
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0a1411",
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0a1411",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    }
+  }
+}

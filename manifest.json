@@ -1,0 +1,33 @@
+{
+  "name": "SKODA A4 — صيانة العربية",
+  "short_name": "صيانة العربية",
+  "description": "متابعة صيانة العربية: الزيت والبوجيهات وسير الكاتينة وباقي البنود",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a1411",
+  "theme_color": "#0a1411",
+  "icons": [
+    {
+      "src": "icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/android-foreground.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

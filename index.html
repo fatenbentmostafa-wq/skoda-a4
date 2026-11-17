@@ -1309,8 +1309,8 @@ function loginForm(){
   return '<label class="f"><span>اسم المستخدم</span><input id="luU" autocomplete="username" placeholder="اسم المستخدم"></label>'
     +'<label class="f"><span>كلمة السر</span><input id="luP" type="password" autocomplete="current-password" placeholder="••••••"></label>'
     +'<button class="btn block" id="luGo">دخول</button>'
-    /* جوا الأبليكشن دخول جوجل بيخرج لكروم ومابيرجعش — بنخفيه */
-    +(IS_APP?'':'<div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:12px">'
+    /* جوجل: في التطبيق الجديد بيدخل من جوه (زي مصاريف البيت)؛ التطبيق القديم بيخرج لكروم فبنخفيه */
+    +((IS_APP&&!NP('FirebaseAuthentication'))?'':'<div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:12px">'
     +'<span style="flex:1;height:1px;background:var(--line)"></span>أو<span style="flex:1;height:1px;background:var(--line)"></span></div>'
     +'<button class="btn ghost block" id="luG">الدخول بحساب جوجل</button>')
     +'<div id="luErr" class="note" style="display:none;margin-top:12px"></div>'
@@ -1321,6 +1321,17 @@ function wireLogin(){
   const go=$('#luGo'); if(go)go.onclick=doUserLogin;
   const p=$('#luP'); if(p)p.onkeydown=e=>{if(e.key==='Enter')doUserLogin();};
   const g=$('#luG'); if(g)g.onclick=async()=>{
+    /* تطبيق الأندرويد: اختيار حساب جوجل من الموبايل نفسه، وبعدين الدخول على Firebase بنفس الحساب */
+    const FA=NP('FirebaseAuthentication');
+    if(FA){
+      g.disabled=true; allowAway();
+      try{ const r=await FA.signInWithGoogle({skipNativeAuth:true});
+        const tok=r&&r.credential&&r.credential.idToken; if(!tok) throw new Error('no-token');
+        await AUTH.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(tok)); }
+      catch(e){ g.disabled=false; console.warn('google',e);
+        if(!/cancel/i.test(String(e&&(e.message||e.code)||''))) loginErr('مقدرتش أدخل بجوجل — جرّب تاني'); }
+      return;
+    }
     const p=new firebase.auth.GoogleAuthProvider();
     p.setCustomParameters({prompt:'select_account'});
     g.disabled=true;

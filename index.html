@@ -1006,7 +1006,7 @@ async function attachCar(){
   carRef=FS.collection('cars').doc(CAR_ID);
   let snap;
   try{ snap=await carRef.get(); }
-  catch(e){ showLogin('<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.</div>'
+  catch(e){ showLogin('<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.<br><span class="tiny">('+esc((e&&(e.code||e.message))||'?')+')</span></div>'
       +'<button class="btn gold block" id="luRetry" style="margin:10px 0">🔄 جرّب تاني</button>'
       +'<button class="btn ghost block" id="luOff">استخدام على الجهاز ده</button>');
     const rt=$('#luRetry'); if(rt)rt.onclick=()=>{rt.disabled=true;attachCar();};
@@ -1141,8 +1141,7 @@ async function checkVersion(){
     firebase.initializeApp(window.FB_CONFIG);
     FS=firebase.firestore(); AUTH=firebase.auth();
     /* جوا WebView الأندرويد قناة Firestore العادية بتفشل — بنجبره على long polling */
-    try{ FS.settings(IS_APP?{experimentalForceLongPolling:true,merge:true}
-                           :{experimentalAutoDetectLongPolling:true,merge:true}); }catch(e){}
+    try{ FS.settings({experimentalForceLongPolling:true,useFetchStreams:false,merge:true}); }catch(e){}
     FS.enablePersistence({synchronizeTabs:true}).catch(()=>{});
   }catch(e){ startLocal(); return; }
 

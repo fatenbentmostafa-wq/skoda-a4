@@ -464,7 +464,7 @@ function vHome(){
   $$('#view [data-a="odo"]').forEach(b=>b.onclick=shOdo);
   $$('#view [data-a="cam"]').forEach(b=>b.onclick=shCam);
   $$('#view [data-a="all"]').forEach(b=>b.onclick=()=>{SHOW_ALL=!SHOW_ALL;render();});
-  $$('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id));
+  $('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id,true));
 }
 /* صفحة الصيانة: أيقونة واسم البند بس — التفاصيل تتفتح بالضغط */
 function tiles(list){
@@ -726,7 +726,7 @@ function loadOCR(){
 }
 
 /* ---- تفاصيل بند ---- */
-function shItem(id){
+function shItem(id,ro){
   const it=itemById(id); if(!it)return;
   const s=itemState(it);
   const mine=LOGS.filter(l=>l.itemId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -747,8 +747,9 @@ function shItem(id){
    +'</div>'
    +'<div class="bar"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div></div>'
    +(it.tip?'<div class="tiny" style="margin:-4px 0 10px">💡 '+esc(it.tip)+'</div>':'');
-  if(canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
-  if(canEdit('items')){
+  if(ro) h+='<div class="tiny" style="margin:4px 0 10px">للتسجيل أو تعديل الميعاد روح صفحة «السجل».</div>';
+  if(!ro && canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
+  if(!ro && canEdit('items')){
     h+='<div class="card"><h3 style="font-size:13px">تعديل الميعاد</h3><div class="grid2">'
      +'<label class="f"><span>كل كام كم</span><input id="eK" inputmode="numeric" value="'+esc(it.km||0)+'"></label>'
      +'<label class="f"><span>كل كام شهر</span><input id="eM" inputmode="numeric" value="'+esc(it.mo||0)+'"></label>'

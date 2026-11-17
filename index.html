@@ -134,6 +134,20 @@ input,select,textarea{width:100%;background:#0b1a16;border:1px solid var(--line)
   border-radius:11px;padding:11px 12px;font-size:15px;font-family:inherit}
 input:focus,select:focus,textarea:focus{outline:0;border-color:var(--em)}
 input[type=file]{padding:8px}
+/* ===== كاميرا العداد جوه البرنامج ===== */
+#camv{position:fixed;inset:0;z-index:90;background:#000;display:flex;flex-direction:column}
+#camv video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#camv .guide{position:absolute;left:8%;right:8%;top:38%;height:22%;border:3px solid #f0cc6a;border-radius:16px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+#camv .hint{position:absolute;left:0;right:0;top:calc(38% - 46px);text-align:center;color:#fff;font-size:14px;font-weight:600;
+  text-shadow:0 1px 4px #000}
+#camv .bar2{position:absolute;left:0;right:0;bottom:0;padding:20px 26px calc(26px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:space-between}
+#camv .shut{width:76px;height:76px;border-radius:50%;background:#fff;border:6px solid rgba(255,255,255,.35);
+  background-clip:padding-box;cursor:pointer}
+#camv .shut:active{transform:scale(.93)}
+#camv .cbtn{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.14);border:0;color:#fff;font-size:22px;cursor:pointer}
+#camv .err{position:absolute;inset:auto 20px 45%;color:#fff;text-align:center;font-size:14px}
 textarea{min-height:60px;resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
@@ -988,7 +1002,51 @@ function setOdo(v,d){
 }
 
 /* ---- قراءة العداد من صورة ---- */
-function shCam(){
+/* بيفتح كاميرا جوه البرنامج على طول؛ لو الكاميرا مش متاحة يرجع لاختيار صورة */
+let _camStream=null;
+function camStop(){ try{ _camStream&&_camStream.getTracks().forEach(t=>t.stop()); }catch(e){} _camStream=null;
+  const v=$('#camv'); if(v) v.remove(); if($('#ov').classList.contains('hide')) document.documentElement.classList.remove('nosc'); }
+function camPickFile(){
+  const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.setAttribute('capture','environment');
+  i.onchange=()=>{const f=i.files[0]; if(f){ camStop(); camResult(f); }}; i.click();
+}
+function camResult(blob){
+  open_('<h3><span class="ic">📷</span>صوّر العداد</h3><div id="cOut"></div>');
+  readOdo(blob);
+}
+async function shCam(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)) return shCamOld();
+  const d=document.createElement('div'); d.id='camv';
+  d.innerHTML='<video autoplay playsinline muted></video><div class="guide"></div>'
+    +'<div class="hint">خلّي رقم العداد جوه المربع</div>'
+    +'<div class="bar2"><button class="cbtn" id="camX" aria-label="إغلاق">✕</button>'
+    +'<button class="shut" id="camS" aria-label="صوّر"></button>'
+    +'<button class="cbtn" id="camG" aria-label="من الصور">🖼️</button></div>';
+  document.body.appendChild(d); document.documentElement.classList.add('nosc');
+  $('#camX').onclick=camStop; $('#camG').onclick=camPickFile;
+  const video=d.querySelector('video');
+  try{
+    _camStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+    if(!$('#camv')){ camStop(); return; }
+    video.srcObject=_camStream; await video.play().catch(()=>{});
+  }catch(e){
+    const er=document.createElement('div'); er.className='err';
+    er.textContent='مش قادر أفتح الكاميرا — اسمح للبرنامج بالكاميرا من إعدادات الموبايل، أو اختار صورة من 🖼️';
+    d.appendChild(er); $('#camS').style.opacity=.3; $('#camS').onclick=camPickFile; return;
+  }
+  $('#camS').onclick=()=>{
+    const vw=video.videoWidth, vh=video.videoHeight; if(!vw) return;
+    const W=d.clientWidth, H=d.clientHeight, sc=Math.max(W/vw,H/vh), ox=(vw*sc-W)/2, oy=(vh*sc-H)/2;
+    const g=d.querySelector('.guide').getBoundingClientRect();
+    /* المربع + هامش صغير، محوّل لإحداثيات الفيديو */
+    const pad=0.06; let x=(g.left-g.width*pad+ox)/sc, y=(g.top-g.height*pad+oy)/sc, w=g.width*(1+2*pad)/sc, h=g.height*(1+2*pad)/sc;
+    x=Math.max(0,x); y=Math.max(0,y); w=Math.min(vw-x,w); h=Math.min(vh-y,h);
+    const c=document.createElement('canvas'); c.width=Math.round(w); c.height=Math.round(h);
+    c.getContext('2d').drawImage(video,x,y,w,h,0,0,c.width,c.height);
+    c.toBlob(b=>{ camStop(); if(b) camResult(b); },'image/jpeg',0.92);
+  };
+}
+function shCamOld(){
   open_('<h3><span class="ic">📷</span>صوّر العداد</h3>'
   +'<div class="note g">صوّر شاشة العداد قريّب وواضح. البرنامج هيقرا الرقم ويوريهولك تأكّده قبل الحفظ.</div>'
   +'<label class="f"><span>الصورة</span><input type="file" id="cF" accept="image/*" capture="environment"></label>'
@@ -1304,6 +1362,7 @@ document.addEventListener('click',e=>{ if(e.target.closest('#cF,#luG,[data-a="sh
 /* ══════════════ زرار الرجوع ══════════════
    بيرجع خطوة: يقفل النافذة المفتوحة ← يرجع من الصفحة الفرعية ← يرجع للرئيسية ← وبعدها بس يخرج */
 function goBack(){
+  if($('#camv')){ camStop(); return true; }
   if(!$('#ov').classList.contains('hide')){ close_(); return true; }
   if(TAB==='users'){ TAB='cfg'; render(); return true; }
   if(TAB==='notifs'){ TAB=(PREV_TAB&&PREV_TAB!=='notifs')?PREV_TAB:'home'; render(); return true; }
@@ -1639,7 +1698,7 @@ async function checkVersion(){
 function applyUpdate(){
   if(!PENDING_VER) return;
   const a=document.activeElement;
-  const busy=!$('#ov').classList.contains('hide') || (a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+  const busy=!!$('#camv') || !$('#ov').classList.contains('hide') || (a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
   if(busy){
     if(!applyUpdate._told){ applyUpdate._told=1; toast('فيه تحديث جديد — هيتطبق أول ما تخلص'); }
     clearTimeout(applyUpdate._t); applyUpdate._t=setTimeout(applyUpdate,3000); return;

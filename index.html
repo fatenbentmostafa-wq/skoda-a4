@@ -205,6 +205,39 @@ nav.tabs button.on{color:var(--em2)}
   opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center}
 #toast.show{opacity:1;transform:translate(50%,0)}
 @media (max-width:400px){ .tile .nm{font-size:11px} .odo .num{font-size:30px} }
+
+/* ===== جرس الإشعارات ===== */
+.hbtn{position:relative;width:42px;height:42px;border-radius:50%;background:#13302a;border:1px solid var(--line);
+  color:var(--txt);display:grid;place-items:center;cursor:pointer;flex:0 0 auto;padding:0}
+.hbtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hbtn .badge{position:absolute;top:-4px;left:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--bad);
+  color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 5px;border:2px solid var(--bg)}
+.nf-sec{color:var(--muted);font-size:12px;font-weight:700;margin:16px 3px 8px}
+.nf{display:flex;gap:11px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:11px 13px;margin-bottom:8px;cursor:pointer;width:100%;text-align:start;color:var(--txt);font-family:inherit}
+.nf .ic{font-size:20px;line-height:1.2;flex:0 0 auto}
+.nf .ic img{width:32px;height:32px;object-fit:contain;border-radius:9px;display:block}
+.nf .t{font-weight:600;font-size:13.5px;line-height:1.5}
+.nf .b{color:var(--muted);font-size:11.5px;margin-top:3px;line-height:1.7}
+.nf .act{display:inline-block;margin-top:7px;background:var(--em);color:#fff;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600}
+.nf.unread{border-color:#2b6b55;background:linear-gradient(90deg,#123a2e,var(--card) 60%)}
+.nf.unread .t:after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--em2);margin-inline-start:7px;vertical-align:middle}
+.nf.alert{border-color:#4a2a28}
+/* ===== رأس الصفحات الفرعية ===== */
+.pghead{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.pghead h2{flex:1;margin:0;font-size:19px;font-weight:700}
+.backbtn{background:transparent;border:1px solid #2a6b55;color:var(--em2);border-radius:22px;padding:8px 14px;
+  font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+/* ===== اختيار نوع الحساب ===== */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#0b1a16;border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:12px}
+.seg button{background:transparent;border:0;color:var(--muted);border-radius:10px;padding:10px 6px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--em2);color:#06231a}
+/* ===== قفل البصمة ===== */
+.lockscreen{position:fixed;inset:0;z-index:99;background:radial-gradient(800px 500px at 50% 0%,#123a2e,var(--bg) 60%),var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:22px}
+html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
+.lockic{width:58px;height:58px;border-radius:17px;background:#123a2e;display:grid;place-items:center;font-size:28px;flex:0 0 auto}
+.lockrow{display:flex;gap:12px;align-items:flex-start}
 </style>
 </head>
 <body>
@@ -216,6 +249,10 @@ nav.tabs button.on{color:var(--em2)}
       <div class="sub" id="hSub">صيانة العربية</div>
     </div>
     <div class="who" id="hWho">المدير</div>
+    <button class="hbtn" id="bellBtn" aria-label="الإشعارات" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="badge hidden" id="bellN">0</span>
+    </button>
   </header>
   <div id="banner"></div>
   <div id="view"></div>
@@ -236,6 +273,17 @@ nav.tabs button.on{color:var(--em2)}
     <h2>صيانة سكودا A4</h2>
     <p class="lgsub">ادخل بحسابك عشان البيانات تتزامن بينك وبين اللي معاك</p>
     <div id="lgBody"></div>
+  </div>
+</div>
+
+<!-- قفل البصمة -->
+<div class="lockscreen hidden" id="lockScreen">
+  <div class="lgbox">
+    <div class="lglogo"><img src="app.png" alt=""></div>
+    <h2>صيانة سكودا مقفولة</h2>
+    <p class="lgsub">افتح ببصمتك أو بالـ PIN بتاع الموبايل</p>
+    <button class="btn gold block" id="unlockBtn" type="button">🔓 فتح</button>
+    <div class="note hidden" id="lockErr" style="margin-top:12px"></div>
   </div>
 </div>
 
@@ -266,6 +314,15 @@ function fmtDur(days){days=Math.abs(days);
   const m=Math.round(days/30.44); if(m<12)return m+' شهر';
   const y=Math.floor(m/12),r=m%12; return y+' سنة'+(r?' و'+r+' شهر':'');}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ══════════════ أدوات الموبايل (تطبيق الأندرويد) — زي مصاريف البيت ══════════════ */
+const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const NP=n=>NATIVE&&window.Capacitor.Plugins?window.Capacitor.Plugins[n]:null;
+const APP_APK='https://github.com/fatenbentmostafa-wq/skoda-a4/releases/download/app/skoda.apk';
+const APP_WEB='https://fatenbentmostafa-wq.github.io/skoda-a4/';
+if(NATIVE){ document.documentElement.classList.add('native');
+  try{ const SB=NP('StatusBar'); if(SB){ SB.setBackgroundColor({color:'#0a1411'}).catch(()=>{}); SB.setStyle({style:'DARK'}).catch(()=>{}); } }catch(e){}
+}
 
 /* ══════════════ البنود الافتراضية ══════════════
    ic = أيقونة. دلوقتي إيموچي — تتبدل بصور الأيقونات اللي هيبعتها المستخدم:
@@ -318,6 +375,11 @@ let REAL_ROLE='admin';            // الدور الحقيقي من Firebase
 let PREVIEW=null;                 // دور التجربة (للمدير بس) — null يعني مفيش تجربة
 function setRealRole(r){ REAL_ROLE=r; ROLE=PREVIEW||r; }
 let TAB='home', SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
+let PREV_TAB='home';              // الصفحة اللي كنت فيها قبل الإشعارات
+let ADD_MODE='pw';                // إضافة مستخدم: pw = اسم مستخدم وباسورد · google = حساب جوجل
+let EVENTS=[];                    // سجل التعديلات من السيرفر (الجرس)
+let MY_DISPLAY='';                // اسمي اللي بيظهر في الإشعارات
+let APP_VER='';                   // رقم نسخة البرنامج من sw.js
 let DB=null;
 
 const LS='skodaA4.v1';
@@ -360,7 +422,8 @@ async function saveCar(patch){Object.assign(CAR,patch);
 async function saveBio(v){CAR.bio=v;try{localStorage.setItem(LS+'.bio',v?'1':'0');}catch(e){}render();}
 async function saveItem(it){const i=ITEMS.findIndex(x=>x.id===it.id);if(i<0)ITEMS.push(it);else ITEMS[i]=it;
   await W(()=>carRef.collection('items').doc(it.id).set(clean(it)));render();}
-async function delItem(id){ITEMS=ITEMS.filter(x=>x.id!==id);
+async function delItem(id){const old=itemById(id); if(old)logEvent('item','مسح بند: '+old.nm);
+  ITEMS=ITEMS.filter(x=>x.id!==id);
   await W(()=>carRef.collection('items').doc(id).delete());render();}
 async function addLog(lg){LOGS.push(lg);
   await W(()=>carRef.collection('logs').doc(lg.id).set(clean(lg)));render();}
@@ -383,6 +446,7 @@ async function delLog(id){
   const lg=LOGS.find(x=>x.id===id);
   LOGS=LOGS.filter(x=>x.id!==id);
   await W(()=>carRef.collection('logs').doc(id).delete());
+  if(lg) logEvent('log','مسح تسجيل: '+(lg.nm||'صيانة'),nf(lg.km)+' كم · '+fmtDate(lg.date));
   /* لو التسجيل الممسوح هو «آخر مرة» في البند، يرجع لآخر تسجيل قبله */
   const it=lg&&itemById(lg.itemId);
   if(it&&Number(it.lastKm)===Number(lg.km)&&(it.lastDate||'')===(lg.date||'')){
@@ -393,6 +457,95 @@ async function delLog(id){
   render();}
 async function savePerms(){ await W(()=>carRef.update({perms:clean(PERMS)})); render(); }
 async function saveUsers(){ lsSave(); render(); }
+
+/* ══════════════ الجرس: سجل التعديلات + التنبيهات + التحديثات ══════════════ */
+/* كل تعديل بيتسجل على السيرفر في cars/skodaA4/events عشان الباقيين يشوفوه */
+function logEvent(t,title,body){
+  if(MODE!=='db'||!carRef||!fbUser) return;
+  carRef.collection('events').add({t:t, title:String(title).slice(0,280), body:String(body||'').slice(0,480),
+    by:fbUser.uid, name:MY_DISPLAY||MYEMAIL.split('@')[0], at:Date.now()}).catch(()=>{});
+}
+let _permLogT=null;
+function logPermsLater(){ clearTimeout(_permLogT); _permLogT=setTimeout(()=>logEvent('perms','عدّل جدول الصلاحيات'),4000); }
+
+const NF_KEY=LS+'.nf';
+let NF={seen:0,read:[],local:[]};
+try{ const r=JSON.parse(localStorage.getItem(NF_KEY)||'null'); if(r)NF=Object.assign(NF,r); }catch(e){}
+function nfSave(){ NF.read=NF.read.slice(-300); NF.local=NF.local.slice(-30); try{localStorage.setItem(NF_KEY,JSON.stringify(NF));}catch(e){} }
+if(!NF.seen){ NF.seen=Date.now(); nfSave(); }      /* أول مرة: القديم مايتحسبش مش مقروء */
+function nfPushLocal(n){ if(NF.local.some(x=>x.id===n.id))return; n.at=n.at||Date.now(); NF.local.push(n); nfSave(); updateBell(); }
+
+function timeAgo(ms){ const m=Math.round((Date.now()-ms)/60000);
+  if(m<1)return 'دلوقتي'; if(m<60)return 'من '+m+' دقيقة'; const h=Math.round(m/60);
+  if(h<24)return 'من '+h+' ساعة'; const d=Math.round(h/24); return d===1?'امبارح':'من '+fmtDur(d); }
+
+function nfItems(){
+  const me=fbUser&&fbUser.uid, read=NF.read;
+  const alerts=canSee('maint')?liveItems().map(it=>({it,s:itemState(it)})).filter(x=>x.s.st==='bad'||x.s.st==='warn')
+    .sort((a,b)=>(a.s.st==='bad'?0:1)-(b.s.st==='bad'?0:1))
+    .map(({it,s})=>{ const id='al:'+it.id+':'+(it.lastKm==null?'':it.lastKm)+':'+s.st;
+      return {id,ic:icOf(it),cls:'alert',title:(s.st==='bad'?'محتاج صيانة دلوقتي: ':'قرّب ميعاده: ')+it.nm,
+        body:shortStat(s),go:'home',unread:s.st==='bad'&&read.indexOf(id)<0}; }):[];
+  const feed=EVENTS.map(e=>({id:'ev:'+e.id,ic:e.t==='log'?'🧾':e.t==='odo'?'📏':e.t==='user'?'👤':e.t==='perms'?'🧮':e.t==='item'?'🧰':'✏️',
+      title:e.title,body:[e.name,e.body].filter(Boolean).join(' · ')+(e.at?' · '+timeAgo(e.at):''),at:e.at||0,
+      go:e.t==='log'||e.t==='item'?'log':e.t==='odo'?'home':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
+    .concat(NF.local.map(n=>Object.assign({},n,{body:(n.body||'')+(n.at?' · '+timeAgo(n.at):''),unread:read.indexOf(n.id)<0})))
+    .sort((a,b)=>b.at-a.at);
+  return {alerts,feed};
+}
+function updateBell(){
+  const b=$('#bellN'); if(!b)return;
+  const {alerts,feed}=nfItems(), n=alerts.filter(x=>x.unread).length+feed.filter(x=>x.unread).length;
+  b.textContent=n>99?'99+':String(n); b.classList.toggle('hidden',!n);
+}
+function nfCard(x){
+  return '<button type="button" class="nf '+(x.cls||'')+(x.unread?' unread':'')+'" data-nf="'+esc(x.id)+'"'
+    +(x.go?' data-go="'+esc(x.go)+'"':'')+(x.url?' data-url="'+esc(x.url)+'"':'')+'>'
+    +'<span class="ic">'+(x.ic&&x.ic.indexOf('<img')===0?x.ic:esc(x.ic||'🔔'))+'</span>'
+    +'<span style="flex:1;min-width:0"><div class="t">'+esc(x.title)+'</div>'
+    +(x.body?'<div class="b">'+esc(x.body)+'</div>':'')
+    +(x.act?'<span class="act">'+esc(x.act)+'</span>':'')+'</span></button>';
+}
+function vNotifs(){
+  const {alerts,feed}=nfItems(), n=alerts.filter(x=>x.unread).length+feed.filter(x=>x.unread).length;
+  let h='<div class="pghead"><h2>🔔 الإشعارات</h2>'
+   + '<button class="btn sm ghost" id="nfAll"'+(n?'':' disabled')+'>قراءة الكل</button></div>';
+  if(alerts.length) h+='<div class="nf-sec">محتاج انتباهك</div>'+alerts.map(nfCard).join('');
+  if(feed.length)   h+='<div class="nf-sec">آخر التعديلات</div>'+feed.slice(0,60).map(nfCard).join('');
+  if(!alerts.length&&!feed.length)
+    h+='<div class="empty"><span class="big">🔔</span>مفيش إشعارات لسه.'
+      +(MODE==='db'?'':'<br>ادخل بحسابك عشان تشوف مين سجّل أو عدّل.')+'</div>';
+  $('#view').innerHTML=h;
+  const all=$('#nfAll'); if(all)all.onclick=()=>{
+    NF.seen=Date.now(); const r=nfItems(); NF.read=NF.read.concat(r.alerts.map(a=>a.id),r.feed.map(f=>f.id)); nfSave(); render(); };
+  $$('#view [data-nf]').forEach(c=>c.onclick=()=>{
+    if(NF.read.indexOf(c.dataset.nf)<0){NF.read.push(c.dataset.nf);nfSave();}
+    if(c.dataset.url){ allowAway(); location.href=c.dataset.url; return; }
+    if(c.dataset.go){ TAB=c.dataset.go; } render();
+  });
+}
+/* نسخة البرنامج: إشعار لما يتحدث، ولو فيه APK أحدث */
+async function checkUpdates(){
+  try{ const t=await fetch('./sw.js?t='+Date.now(),{cache:'no-store'}).then(r=>r.text());
+    const m=t.match(/VERSION\s*=\s*"(v\d+)"/);
+    if(m){ APP_VER=m[1]; let seen=''; try{seen=localStorage.getItem(LS+'.ver')||'';}catch(e){}
+      if(seen&&seen!==APP_VER) nfPushLocal({id:'ver:'+APP_VER,ic:'✨',title:'البرنامج اتحدث لنسخة '+APP_VER,body:'تحسينات وإضافات جديدة.'});
+      try{localStorage.setItem(LS+'.ver',APP_VER);}catch(e){} }
+  }catch(e){}
+  if(!NATIVE) return;
+  try{
+    const rel=await fetch('https://api.github.com/repos/fatenbentmostafa-wq/skoda-a4/releases/tags/app',{cache:'no-store'}).then(r=>r.ok?r.json():null);
+    const mm=rel&&String(rel.body||'').match(/1\.0\.(\d+)/); const latest=mm?+mm[1]:0;
+    const A=NP('App');
+    if(!A){ /* تطبيق قديم من غير أدوات البصمة والرجوع */
+      nfPushLocal({id:'apk:old',ic:'📲',title:'نزّل النسخة الجديدة من التطبيق',body:'فيها البصمة وزرار الرجوع والمشاركة. ثبّتها فوق القديمة والداتا مش هتتمسح.',url:APP_APK,act:'نزّل التحديث'});
+      return; }
+    const info=await A.getInfo(); const mine=+(String(info.version).split('.').pop())||0;
+    if(latest>mine) nfPushLocal({id:'apk:'+latest,ic:'📲',title:'فيه نسخة جديدة من التطبيق (1.0.'+latest+')',
+      body:'نزّلها وثبّتها فوق القديمة، والداتا هتفضل زي ما هي.',url:APP_APK,act:'نزّل التحديث'});
+  }catch(e){}
+  render();
+}
 
 /* ══════════════ حساب حالة كل بند ══════════════ */
 function itemState(it){
@@ -447,11 +600,16 @@ function render(){
   $('#hTtl').textContent=CAR.nm||'SKODA A4';
   $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
   $('#hWho').textContent=(ROLE_NM[ROLE]||'')+(PREVIEW?' (تجربة)':'');
-  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===TAB));
+  /* الصفحات الفرعية بتنوّر التاب بتاعها */
+  const navOn=TAB==='users'?'cfg':TAB==='notifs'?'':TAB;
+  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===navOn));
   let bn='';
-  if(MODE==='local') bn='<div class="note">نسخة تجريبية — البيانات لسه محفوظة على الجهاز ده. المزامنة على السيرفر هتتربط في الخطوة الجاية.</div>';
+  if(MODE==='local') bn='<div class="note">شغّال على الجهاز ده بس — البيانات مش بتتزامن. ادخل بحسابك من الإعدادات.</div>';
   $('#banner').innerHTML=bn;
-  if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else vCfg();
+  if(TAB==='notifs')vNotifs();
+  else if(TAB==='users'&&ROLE==='admin')vUsers();
+  else if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else {TAB='cfg';vCfg();}
+  updateBell();
   window.scrollTo(0,0);
 }
 
@@ -571,50 +729,36 @@ function vLog(){
 function vCfg(){
   const admin=ROLE==='admin';
   let h='';
-  /* الأمان */
-  h+='<div class="card"><h3>🔐 الأمان والدخول</h3>'
-   + (MODE==='db'
-      ? '<div class="swrow"><div class="t"><b>'+esc(MYNAME||MYEMAIL.split("@")[0])+'</b>'
-        +'<small>داخل بحسابك · '+esc(ROLE_NM[ROLE]||ROLE)+' · البيانات بتتزامن ✓</small></div>'
-        +'<button class="btn sm ghost" data-a="out">خروج</button></div>'
-      : '<div class="note" style="margin:0 0 10px">شغّال على الجهاز ده من غير مزامنة.'
-        +(cfgReady()?' <b>ادخل بحسابك</b> عشان البيانات تتشارك.':' لسه مفيش إعدادات Firebase في الملف.')+'</div>'
-        +(cfgReady()?'<button class="btn block" data-a="in" style="margin-bottom:10px">تسجيل الدخول</button>':''))
-   + '<div class="swrow"><div class="t"><b>الدخول بالبصمة</b>'
-   + '<small>يتفعّل في تطبيق الأندرويد بعد تركيب الـ APK</small></div>'
-   + '<label class="sw"><input type="checkbox" id="swBio" '+(CAR.bio?'checked':'')+'><i></i></label></div>'
-   + (MODE==='db'&&admin?'<button class="btn danger block" data-a="force" style="margin-top:10px">🚪 خروج إجباري لكل الأجهزة</button>'
-      +'<div class="tiny">بيقفل البرنامج على كل الموبايلات ويفتح تاني على آخر نسخة.</div>':'')
-   + '</div>';
 
-  /* المستخدمون */
-  if(admin){
-    h+='<div class="card"><h3>👥 المستخدمون</h3>';
-    if(MODE!=='db') h+='<div class="note" style="margin-bottom:10px">إضافة المستخدمين محتاجة اتصال بالسيرفر — سجّل دخولك الأول.</div>';
-    if(!USERS.length) h+='<div class="tiny" style="margin-bottom:10px">لسه مفيش مستخدمين مضافين.</div>';
-    USERS.forEach(u=>{
-      h+='<div class="row" style="margin-bottom:7px"><div class="ic">👤</div>'
-       + '<div style="flex:1;min-width:0"><div class="nm">'+esc(u.name||u.un)+'</div>'
-       + '<div class="ln">'+esc(u.un||u.email||'')+' · <span class="pill">'+esc(ROLE_NM[u.role]||u.role)+'</span>'
-       + (u.owner?' · <span class="pill">صاحب البرنامج</span>':'')+'</div></div>'
-       + '<div class="end"><button class="btn sm ghost" data-a="eu" data-id="'+esc(u.id)+'">تعديل</button></div></div>';
-    });
-    h+='<button class="btn block" data-a="nu" style="margin-top:8px"'+(MODE==='db'?'':' disabled')+'>＋ إضافة مستخدم</button></div>';
-
-    /* الصلاحيات */
-    h+='<div class="card"><h3>🧮 تحديد صلاحيات الوصول</h3>'
-     + '<table class="ptbl"><tr><th>الصفحة</th><th>محرر<br>يشوف</th><th>محرر<br>يعدّل</th>'
-     + '<th>مشاهد<br>يشوف</th><th>مشاهد<br>يعدّل</th></tr>';
-    PERM_ROWS.forEach(r=>{
-      h+='<tr><td>'+esc(r.nm)+'</td>'+['editor','viewer'].map(ro=>{
-        const v=PERMS[ro][r.p]||'none';
-        const see='<td><button class="pb '+(v!=='none'?'on':'off')+'" data-pr="'+r.p+'" data-ro="'+ro+'" data-c="see">'+(v!=='none'?'✓':'✗')+'</button></td>';
-        const ed = r.ed? '<td><button class="pb '+(v==='edit'?'on':'off')+'" data-pr="'+r.p+'" data-ro="'+ro+'" data-c="ed">'+(v==='edit'?'✓':'✗')+'</button></td>'
-                       : '<td><button class="pb" disabled>–</button></td>';
-        return see+ed;}).join('')+'</tr>';
-    });
-    h+='</table><div class="tiny">«–» يعني الصفحة عرض بس ومفيهاش تعديل. نفس المنطق ده هيتكتب في firestore.rules عشان السيرفر يمنع كمان، مش الشاشة بس.</div></div>';
+  /* قفل البصمة — زي مصاريف البيت */
+  if(LOCK_OK){
+    h+='<div class="card"><div class="lockrow"><span class="lockic">🫆</span><div style="flex:1;min-width:0">'
+     + '<h3 style="margin:2px 0 6px">قفل التطبيق بالبصمة</h3>'
+     + '<div class="tiny" style="margin:0 0 10px;font-size:12px">'+(lockCred
+         ?'شغال ✓ التطبيق بيقفل كل ما تخرج منه، وبيطلب بصمتك أو الـ PIN عشان ترجع.'
+         :'التطبيق هيطلب بصمتك أو الـ PIN بتاع الموبايل كل ما يتفتح.')+'</div>'
+     + '<button class="btn sm '+(lockCred?'danger':'')+'" data-a="lock">'+(lockCred?'إيقاف القفل':'تشغيل القفل')+'</button>'
+     + '</div></div></div>';
+  } else if(IS_APP){
+    h+='<div class="card"><h3>🫆 قفل التطبيق بالبصمة</h3><div class="tiny">نزّل آخر نسخة من التطبيق (من الجرس 🔔) عشان البصمة تشتغل.</div></div>';
   }
+
+  /* المزامنة والحساب */
+  h+='<div class="card" style="border-color:'+(MODE==='db'?'#2a6b55':'var(--line)')+'">';
+  if(MODE==='db'){
+    h+='<h3 style="color:var(--em2)">متزامن مع السيرفر</h3>'
+     + '<div class="tiny" style="margin:-6px 0 12px;font-size:13px" dir="ltr">'+esc(MY_LOGIN||MYEMAIL)+'</div>'
+     + '<div class="tiny" style="margin:-8px 0 12px">داخل باسم <b>'+esc(MY_DISPLAY||'—')+'</b> · '+esc(ROLE_NM[REAL_ROLE]||REAL_ROLE)+'</div>'
+     + (admin?'<button class="btn ghost block" data-a="users" style="margin-bottom:8px">👥 المستخدمين والصلاحيات</button>':'')
+     + '<button class="btn ghost block" data-a="out">خروج من الحساب</button>'
+     + (admin?'<button class="btn danger block" data-a="force" style="margin-top:8px">🚪 خروج إجباري لكل الأجهزة</button>'
+        +'<div class="tiny">بيقفل البرنامج على كل الموبايلات ويفتح تاني على آخر نسخة.</div>':'');
+  } else {
+    h+='<h3>غير متزامن</h3><div class="tiny" style="margin:-4px 0 10px">شغّال على الجهاز ده بس.'
+     + (cfgReady()?' ادخل بحسابك عشان البيانات تتشارك مع اللي معاك.':' لسه مفيش إعدادات Firebase في الملف.')+'</div>'
+     + (cfgReady()?'<button class="btn block" data-a="in">تسجيل الدخول</button>':'');
+  }
+  h+='</div>';
 
   /* بيانات العربية — محكومة بصلاحية car */
   if(canSee('car')){
@@ -632,11 +776,18 @@ function vCfg(){
   /* البنود اتنقلت لصفحة السجل */
   if(canSee('items')){
     h+='<div class="card"><h3>🧰 بنود الصيانة والمواعيد</h3>'
-     + '<div class="tiny" style="margin-bottom:10px">البنود ومواعيدها بقت في صفحة «السجل» — تضيف وتمسح وتعدّل من هناك.</div>'
+     + '<div class="tiny" style="margin-bottom:10px">البنود ومواعيدها في صفحة «السجل» — تضيف وتمسح وتعدّل من هناك.</div>'
      + (ITEMS.length?'<button class="btn ghost block" data-a="goitems">افتح البنود في السجل</button>'
                     :'<button class="btn block" data-a="seed">تحميل القائمة الجاهزة</button>')
      + '</div>';
   }
+
+  /* ابعت البرنامج لحد — زي مصاريف البيت */
+  h+='<div class="card"><h3>📲 ابعت البرنامج لحد</h3>'
+   + '<div class="tiny" style="margin:-4px 0 10px">بيتبعت لينك تنزيل التطبيق للأندرويد ولينك فتحه من المتصفح للآيفون أو الكمبيوتر. '
+   + 'الشخص هيحتاج إنك تضيفه من «المستخدمين» عشان يقدر يدخل.</div>'
+   + '<div class="grid2"><button class="btn" data-a="shwa">📲 ابعته واتساب</button>'
+   + '<button class="btn ghost" data-a="shmore">مشاركة بطريقة تانية</button></div></div>';
 
   /* نسخة احتياطية */
   if(canSee('backup')){
@@ -654,32 +805,113 @@ function vCfg(){
      + '<option value="editor">محرر</option><option value="viewer">مشاهد</option></select>'
      + '<div class="tiny">للتجربة بس — تشوف التطبيق بيبان إزاي لبابا أو أخوك.</div></div>';
   }
+  h+='<div class="tiny" style="text-align:center;margin:14px 0 4px">صيانة سكودا '+esc(APP_VER||'')
+   + (NATIVE?' · تطبيق الأندرويد':'')+'<br>البرنامج بيتحدث لوحده أول ما تفتحه وهو متصل بالنت.</div>';
 
   $('#view').innerHTML=h;
 
-  const bio=$('#swBio'); if(bio)bio.onchange=()=>saveBio(bio.checked);
+  const lk=$('#view [data-a="lock"]'); if(lk)lk.onclick=toggleLock;
+  const us=$('#view [data-a="users"]'); if(us)us.onclick=()=>{TAB='users';render();};
   const out=$('#view [data-a="out"]'); if(out)out.onclick=()=>{if(confirm('تخرج من حسابك؟'))doLogout();};
   const inn=$('#view [data-a="in"]'); if(inn)inn.onclick=()=>{showLogin();};
   const fx=$('#view [data-a="force"]'); if(fx)fx.onclick=()=>{
     if(confirm('هيتقفل البرنامج على كل الأجهزة ويفتح تاني. تمام؟'))forceExitAll();};
-  const sc=$('#view [data-a="sc"]'); if(sc)sc.onclick=()=>saveCar({
-    nm:$('#cNm').value.trim()||'SKODA A4', plate:$('#cPl').value.trim(), year:$('#cYr').value.trim(),
-    avg:Math.max(0,parseInt($('#cAvg').value,10)||0)});
+  const sc=$('#view [data-a="sc"]'); if(sc)sc.onclick=async()=>{
+    await saveCar({nm:$('#cNm').value.trim()||'SKODA A4', plate:$('#cPl').value.trim(), year:$('#cYr').value.trim(),
+      avg:Math.max(0,parseInt($('#cAvg').value,10)||0)});
+    logEvent('car','عدّل بيانات العربية'); toast('اتحفظ');};
   const sd=$('#view [data-a="seed"]'); if(sd)sd.onclick=seed;
   const gi=$('#view [data-a="goitems"]'); if(gi)gi.onclick=()=>{TAB='log';render();};
-  const nu=$('#view [data-a="nu"]'); if(nu)nu.onclick=()=>shUser(null);
-  $$('#view [data-a="eu"]').forEach(b=>b.onclick=()=>shUser(b.dataset.id));
-  $$('#view .card .row[data-id]').forEach(r=>r.onclick=()=>shItem(r.dataset.id));
+  const wa=$('#view [data-a="shwa"]'); if(wa)wa.onclick=shareAppWa;
+  const sm=$('#view [data-a="shmore"]'); if(sm)sm.onclick=shareAppMore;
   const ex=$('#view [data-a="exp"]'); if(ex)ex.onclick=shExport;
   const im=$('#view [data-a="imp"]'); if(im)im.onclick=shImport;
   const rt=$('#roleTry'); if(rt){rt.value=ROLE;rt.onchange=()=>{
     PREVIEW=rt.value==='admin'?null:rt.value; ROLE=PREVIEW||REAL_ROLE; TAB='cfg';render();};}
   const bk=$('#view [data-a="back"]'); if(bk)bk.onclick=()=>{PREVIEW=null;ROLE=REAL_ROLE;render();};
+}
+
+/* ══════════════ صفحة المستخدمين والصلاحيات (للمدير) ══════════════ */
+function vUsers(){
+  let h='<div class="pghead"><button class="backbtn" data-a="bk">‹ الإعدادات</button><h2>المستخدمين</h2></div>';
+  if(MODE!=='db') h+='<div class="note">إدارة المستخدمين محتاجة اتصال بالسيرفر — سجّل دخولك الأول.</div>';
+
+  /* اللي ليهم دخول */
+  h+='<div class="card"><h3>👥 اللي ليهم دخول</h3>';
+  if(!USERS.length) h+='<div class="tiny">لسه مفيش مستخدمين.</div>';
+  USERS.slice().sort((a,b)=>(b.owner?1:0)-(a.owner?1:0)).forEach(u=>{
+    h+='<div class="row" style="margin-bottom:7px"><div class="ic">'+(u.google?'🟢':'👤')+'</div>'
+     + '<div style="flex:1;min-width:0"><div class="nm">'+esc(u.name||u.un||u.email)+'</div>'
+     + '<div class="ln" dir="auto">'+esc(u.un||u.email||'')+'<br><span class="pill">'+esc(ROLE_NM[u.role]||u.role)+'</span>'
+     + (u.owner?' <span class="pill">صاحب البرنامج</span>':'')
+     + (u.google?' <span class="pill">حساب جوجل</span>':'')
+     + (u.pending?' <span class="pill warn">لسه مادخلش</span>':'')+'</div></div>'
+     + (u.owner?'':'<div class="end"><button class="btn sm ghost" data-a="eu" data-id="'+esc(u.id)+'">تعديل</button></div>')+'</div>';
+  });
+  h+='</div>';
+
+  /* إضافة شخص */
+  const g=ADD_MODE==='google';
+  h+='<div class="card"><h3>➕ إضافة شخص</h3>'
+   + '<div class="seg"><button type="button" class="'+(g?'':'on')+'" data-m="pw">اسم مستخدم وباسورد</button>'
+   + '<button type="button" class="'+(g?'on':'')+'" data-m="google">حساب جوجل</button></div>'
+   + '<label class="f"><span>الاسم</span><input id="auN" placeholder="مثلًا: بابا"></label>'
+   + (g
+      ? '<label class="f"><span>إيميل جوجل</span><input id="auE" type="email" dir="ltr" placeholder="example@gmail.com" autocapitalize="off"></label>'
+        +'<div class="tiny" style="margin:-4px 0 10px">الشخص يدخل بحساب جوجل ده من المتصفح، وأول ما يدخل بيتربط لوحده.</div>'
+      : '<div class="grid2"><label class="f"><span>اسم المستخدم</span><input id="auU" dir="ltr" placeholder="baba" autocapitalize="off"></label>'
+        +'<label class="f"><span>الباسورد</span><input id="auP" type="text" dir="ltr" placeholder="6 حروف أو أرقام على الأقل"></label></div>')
+   + '<label class="f"><span>الصلاحية</span><select id="auR">'
+   + ['editor','viewer','admin'].map(r=>'<option value="'+r+'">'+ROLE_NM[r]+'</option>').join('')+'</select></label>'
+   + '<div id="auErr" class="note hidden"></div>'
+   + '<button class="btn block" data-a="add"'+(MODE==='db'?'':' disabled')+'>إضافة</button></div>';
+
+  /* الصلاحيات */
+  h+='<div class="card"><h3>🧮 صلاحيات الوصول</h3>'
+   + '<div class="tiny" style="margin:-4px 0 10px">المدير بيشوف ويعدّل كل حاجة. حدد المحرر والمشاهد يشوفوا ويعدّلوا إيه.</div>'
+   + '<table class="ptbl"><tr><th>الصفحة</th><th>محرر<br>يشوف</th><th>محرر<br>يعدّل</th>'
+   + '<th>مشاهد<br>يشوف</th><th>مشاهد<br>يعدّل</th></tr>';
+  PERM_ROWS.forEach(r=>{
+    h+='<tr><td>'+esc(r.nm)+'</td>'+['editor','viewer'].map(ro=>{
+      const v=PERMS[ro][r.p]||'none';
+      const see='<td><button class="pb '+(v!=='none'?'on':'off')+'" data-pr="'+r.p+'" data-ro="'+ro+'" data-c="see">'+(v!=='none'?'✓':'✗')+'</button></td>';
+      const ed = r.ed? '<td><button class="pb '+(v==='edit'?'on':'off')+'" data-pr="'+r.p+'" data-ro="'+ro+'" data-c="ed">'+(v==='edit'?'✓':'✗')+'</button></td>'
+                     : '<td><button class="pb" disabled>–</button></td>';
+      return see+ed;}).join('')+'</tr>';
+  });
+  h+='</table><div class="tiny">«–» يعني الصفحة عرض بس. السيرفر نفسه بيطبّق الجدول ده، مش الشاشة بس.</div></div>';
+
+  $('#view').innerHTML=h;
+  $('#view [data-a="bk"]').onclick=()=>{TAB='cfg';render();};
+  $$('#view [data-m]').forEach(b=>b.onclick=()=>{ADD_MODE=b.dataset.m;render();});
+  $$('#view [data-a="eu"]').forEach(b=>b.onclick=()=>shUser(b.dataset.id));
+  const err=t=>{const e=$('#auErr');e.classList.remove('hidden');e.textContent=t;};
+  const add=$('#view [data-a="add"]'); if(add)add.onclick=async()=>{
+    const name=$('#auN').value.trim(), role=$('#auR').value;
+    add.disabled=true;
+    try{
+      if(ADD_MODE==='google') await addGoogleUser(name,$('#auE').value,role);
+      else await createUser(name,$('#auU').value,$('#auP').value,role);
+      toast('اتضاف ✓'); render();
+    }catch(e){ err((e&&e.message)||'مقدرتش أضيفه'); add.disabled=false; }
+  };
   $$('#view .pb[data-pr]').forEach(b=>b.onclick=()=>{
     const p=b.dataset.pr,ro=b.dataset.ro,c=b.dataset.c,cur=PERMS[ro][p]||'none';
     PERMS[ro][p]= c==='see' ? (cur==='none'?'view':'none')
                             : (cur==='edit'?'view':'edit');
-    savePerms();});
+    savePerms(); logPermsLater();});
+}
+
+/* ══════════════ ابعت البرنامج لحد ══════════════ */
+const shareAppText=()=>'برنامج «صيانة سكودا» 🚗\n\nللأندرويد: نزّل التطبيق من هنا وثبّته (لو سألك اسمح بالتثبيت من المصدر ده):\n'
+  +APP_APK+'\n\nللآيفون أو الكمبيوتر: افتحه من هنا:\n'+APP_WEB+'\n\nبعد التثبيت ادخل باليوزر والباسورد اللي هبعتهملك.';
+function shareAppWa(){ allowAway(); location.href='https://wa.me/?text='+encodeURIComponent(shareAppText()); }
+async function shareAppMore(){
+  allowAway(); const t=shareAppText();
+  try{ const S=NP('Share'); if(S){ await S.share({title:'صيانة سكودا',text:t,dialogTitle:'ابعت البرنامج'}); return; } }catch(x){ return; }
+  try{ if(navigator.share){ await navigator.share({title:'صيانة سكودا',text:t}); return; } }catch(x){ return; }
+  try{ await navigator.clipboard.writeText(t); toast('اتنسخ الكلام، الصقه في أي مكان'); }
+  catch(x){ location.href='https://wa.me/?text='+encodeURIComponent(t); }
 }
 
 /* ══════════════ النوافذ ══════════════ */
@@ -695,7 +927,7 @@ function shOdo(){
   $('#oX').onclick=close_;
   $('#oS').onclick=()=>{const v=parseInt($('#oV').value,10);
     if(isNaN(v)||v<0){alert('اكتب رقم العداد صح');return;}
-    setOdo(v,$('#oD').value||todayISO());close_();};
+    setOdo(v,$('#oD').value||todayISO()); logEvent('odo','حدّث العداد: '+nf(v)+' كم'); close_();};
 }
 function setOdo(v,d){
   const patch={odo:v,odoDate:d};
@@ -738,7 +970,7 @@ function showOdoConfirm(url,val,failed){
   $('#cX2').onclick=close_;
   $('#cS').onclick=()=>{const v=parseInt($('#cV').value,10);
     if(isNaN(v)||v<0){alert('اكتب رقم العداد');return;}
-    setOdo(v,$('#cD').value||todayISO());close_();};
+    setOdo(v,$('#cD').value||todayISO()); logEvent('odo','حدّث العداد: '+nf(v)+' كم','بالكاميرا'); close_();};
   const i=$('#cV'); if(i&&!val)i.focus();
 }
 let _ocr=null;
@@ -805,7 +1037,7 @@ function shItem(id,ro){
       km:parseInt($('#eK').value,10)||0, mo:parseInt($('#eM').value,10)||0,
       lastKm:$('#eLK').value===''?null:(parseInt($('#eLK').value,10)||0),
       lastDate:$('#eLD').value||'', on:$('#eOn').checked}));
-    close_();};
+    logEvent('item','عدّل ميعاد: '+it.nm); close_();};
   const dl=$('#iDel'); if(dl)dl.onclick=()=>{if(confirm('تحذف «'+it.nm+'»؟')){delItem(it.id);close_();}};
 }
 
@@ -832,6 +1064,7 @@ function shLog(itemId){
     close_();
     await addLog({id:uid(),itemId:it.id,nm:it.nm,km:km,date:date,by:$('#lB').value.trim(),
       cost:cEl?(parseInt(cEl.value,10)||0):0,place:$('#lP').value.trim(),notes:$('#lN').value.trim(),ts:Date.now()});
+    logEvent('log','سجّل غيار: '+it.nm,nf(km)+' كم · '+fmtDate(date));
     /* لو ده غيار قديم بيتسجل متأخر، مايغطّيش على تسجيل أحدث */
     await markDone(it,km,date);
     render();
@@ -852,7 +1085,7 @@ function shNewItem(){
     saveItem({id:'c'+uid(),ic:$('#nI').value.trim()||'🔧',nm:nm,
       km:parseInt($('#nK').value,10)||0,mo:parseInt($('#nM').value,10)||0,on:true,
       ord:ITEMS.reduce((m,i)=>Math.max(m,i.ord||0),0)+1,lastKm:null,lastDate:'',tip:''});
-    close_();};
+    logEvent('item','ضاف بند: '+nm); close_();};
 }
 
 /* ---- مستخدم ---- */
@@ -864,8 +1097,10 @@ function shUser(id){
   +(isNew
      ? '<div class="grid2"><label class="f"><span>اسم المستخدم (إنجليزي)</span><input id="uU" placeholder="baba" autocapitalize="off"></label>'
        +'<label class="f"><span>كلمة السر</span><input id="uP" type="text" placeholder="6 حروف على الأقل"></label></div>'
-     : '<div class="tiny" style="margin:-4px 0 12px">اسم المستخدم: <b>'+esc(u.un||'—')+'</b> — مينفعش يتغير. '
-       +'لتغيير كلمة السر امسح المستخدم واعمله تاني.</div>')
+     : (u.google
+       ? '<div class="tiny" style="margin:-4px 0 12px" dir="auto">حساب جوجل: <b>'+esc(u.email)+'</b></div>'
+       : '<div class="tiny" style="margin:-4px 0 12px">اسم المستخدم: <b>'+esc(u.un||'—')+'</b> — مينفعش يتغير. '
+       +'لتغيير كلمة السر امسح المستخدم واعمله تاني.</div>'))
   +'<label class="f"><span>الدور</span><select id="uR">'
   +['admin','editor','viewer'].map(r=>'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_NM[r]+'</option>').join('')
   +'</select><div class="tiny">المدير يشوف ويعدّل كل حاجة · المحرر والمشاهد بيتحكم فيهم جدول الصلاحيات.</div></label>'
@@ -932,8 +1167,101 @@ function shImport(){
 async function seed(){for(const it of DEFAULT_ITEMS)if(!itemById(it.id))
   await saveItem(Object.assign({lastKm:null,lastDate:''},it));}
 
+/* ══════════════ قفل البصمة (زي مصاريف البيت) ══════════════
+   في تطبيق الأندرويد: NativeBiometric (البصمة أو الـ PIN).
+   في المتصفح: WebAuthn — بصمة الموبايل نفسه. */
+const LOCK_KEY=LS+'.lock';
+let lockCred=null; try{ lockCred=localStorage.getItem(LOCK_KEY); }catch(e){}
+let LOCK_OK=false, verifying=false, awayOk=false;
+const allowAway=()=>{ awayOk=true; };   /* الكاميرا والمشاركة ودخول جوجل مايقفلوش البرنامج */
+const b64=buf=>btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+async function lockSupported(){
+  if(NATIVE){ const NB=NP('NativeBiometric'); if(!NB) return false;
+    try{ const r=await NB.isAvailable({useFallback:true}); return !!(r&&r.isAvailable); }catch(e){ return false; } }
+  try{ return window.isSecureContext && !!window.PublicKeyCredential
+    && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }catch(e){ return false; }
+}
+async function verifyUser(){
+  verifying=true;
+  try{
+    if(NATIVE){ await NP('NativeBiometric').verifyIdentity({reason:'افتح صيانة سكودا',title:'صيانة سكودا',
+      subtitle:'بصمتك أو الـ PIN',useFallback:true,maxAttempts:5}); return true; }
+    const a=await navigator.credentials.get({publicKey:{challenge:rnd(32),
+      allowCredentials:[{type:'public-key',id:unb64(lockCred)}],userVerification:'required',timeout:60000}});
+    return !!a;
+  } finally { setTimeout(()=>{ verifying=false; },800); }
+}
+function showLock(){ if(!lockCred||!LOCK_OK) return; document.documentElement.classList.add('locked');
+  $('#lockScreen').classList.remove('hidden'); $('#lockErr').classList.add('hidden'); }
+function hideLock(){ document.documentElement.classList.remove('locked'); $('#lockScreen').classList.add('hidden'); }
+const lockShown=()=>!$('#lockScreen').classList.contains('hidden');
+async function tryUnlock(){
+  if(verifying) return;
+  try{ if(await verifyUser()) hideLock(); }
+  catch(e){ const el=$('#lockErr'); el.textContent='ماتمش التأكيد. دوس «فتح» وجرّب تاني.'; el.classList.remove('hidden'); }
+}
+$('#unlockBtn').onclick=tryUnlock;
+async function toggleLock(){
+  if(lockCred){
+    try{ if(!(await verifyUser())) return; }catch(e){ toast('لازم تأكد ببصمتك عشان توقف القفل'); return; }
+    lockCred=null; try{ localStorage.removeItem(LOCK_KEY); }catch(e){} render(); toast('القفل اتوقف'); return;
+  }
+  if(NATIVE){
+    try{ await verifyUser(); lockCred='native'; try{ localStorage.setItem(LOCK_KEY,lockCred); }catch(e){}
+      render(); toast('القفل اشتغل ✓ من المرة الجاية التطبيق هيطلب بصمتك'); }
+    catch(e){ toast('اتلغى تشغيل القفل'); }
+    return;
+  }
+  try{
+    const c=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:'صيانة سكودا'},
+      user:{id:rnd(16),name:'skoda',displayName:'صيانة سكودا'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},timeout:60000}});
+    lockCred=b64(c.rawId); try{ localStorage.setItem(LOCK_KEY,lockCred); }catch(e){}
+    render(); toast('القفل اشتغل ✓ من المرة الجاية البرنامج هيطلب بصمتك');
+  }catch(e){ toast(e&&e.name==='NotAllowedError'?'اتلغى تشغيل القفل':'الموبايل ده مش بيدعم القفل بالبصمة من المتصفح'); }
+}
+/* يقفل كل ما البرنامج يخرج من الشاشة */
+document.addEventListener('visibilitychange',()=>{
+  if(!lockCred||!LOCK_OK) return;
+  if(document.visibilityState==='hidden'){ if(verifying||awayOk) return; showLock(); }
+  else { if(awayOk){ awayOk=false; return; } if(!verifying&&lockShown()) tryUnlock(); }
+});
+/* اختيار صورة العداد / المشاركة / دخول جوجل: مايقفلش */
+document.addEventListener('click',e=>{ if(e.target.closest('#cF,#luG,[data-a="shwa"],[data-a="shmore"],[data-url]')) allowAway(); },true);
+
+/* ══════════════ زرار الرجوع ══════════════
+   بيرجع خطوة: يقفل النافذة المفتوحة ← يرجع من الصفحة الفرعية ← يرجع للرئيسية ← وبعدها بس يخرج */
+function goBack(){
+  if(!$('#ov').classList.contains('hide')){ close_(); return true; }
+  if(TAB==='users'){ TAB='cfg'; render(); return true; }
+  if(TAB==='notifs'){ TAB=(PREV_TAB&&PREV_TAB!=='notifs')?PREV_TAB:'home'; render(); return true; }
+  if(TAB!=='home'){ TAB='home'; SHOW_ALL=false; render(); return true; }
+  return false;
+}
+if(NATIVE){ const A=NP('App'); if(A&&A.addListener){
+  A.addListener('backButton',()=>{
+    if(lockShown()||!$('#login').classList.contains('hide')){ try{A.exitApp();}catch(e){} return; }
+    if(!goBack()){ try{A.exitApp();}catch(e){} }
+  });
+  A.addListener('pause',()=>{ if(lockCred&&LOCK_OK&&!verifying&&!awayOk) showLock(); });
+  A.addListener('resume',()=>{ if(!lockCred||!LOCK_OK) return; if(awayOk){ awayOk=false; return; }
+    if(!verifying&&lockShown()) tryUnlock(); });
+} }
+/* في المتصفح: زرار الرجوع بتاع الموبايل بيرجع جوه البرنامج بدل ما يقفله */
+if(!NATIVE){
+  try{ history.replaceState({sk:'base'},''); history.pushState({sk:'app'},''); }catch(e){}
+  window.addEventListener('popstate',()=>{
+    if(goBack()){ try{ history.pushState({sk:'app'},''); }catch(e){} }
+    else { try{ history.back(); }catch(e){} }
+  });
+}
+
 /* ══════════════ التشغيل ══════════════ */
 $$('nav.tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;SHOW_ALL=false;render();});
+$('#bellBtn').onclick=()=>{ if(TAB==='notifs'){ goBack(); return; } PREV_TAB=TAB; TAB='notifs'; render(); };
 
 /* بنود اتشالت نهائيًا من البرنامج */
 const DROP=['altbelt','washer','general','align','coolant','radiator','check','brakeoil','tires'];
@@ -956,7 +1284,7 @@ const IS_APP=(function(){ try{
   return /\bwv\b/.test(ua) || (/Android/.test(ua) && !/Chrome\/\d+\.\d+\.\d+\.\d+ Mobile/.test(ua) && /Version\/\d/.test(ua));
 }catch(e){ return false; } })();
 let FS=null, AUTH=null, SEC=null, fbUser=null, carRef=null, UNSUB=[];
-let MYEMAIL='', MYNAME='', LOADED={car:0,items:0,logs:0};
+let MYEMAIL='', MYNAME='', MY_LOGIN='', LOADED={car:0,items:0,logs:0};
 
 const cfgReady = () => window.FB_CONFIG && window.FB_CONFIG.apiKey
                        && String(window.FB_CONFIG.apiKey).indexOf('ضع_')<0;
@@ -1035,9 +1363,12 @@ function roleOf(c){
   return (c.roles&&c.roles[MYEMAIL])||'';
 }
 function usersFromCar(c){
-  const roles=(c&&c.roles)||{}, names=(c&&c.names)||{}, unames=(c&&c.unames)||{};
-  return Object.keys(roles).map(em=>({id:em,email:em,name:names[em]||em,
-    un:unames[em]||'',role:roles[em],owner:c.owner&&c.uids&&c.uids[em]===c.owner}));
+  const roles=(c&&c.roles)||{}, names=(c&&c.names)||{}, unames=(c&&c.unames)||{}, uids=(c&&c.uids)||{};
+  return Object.keys(roles).map(em=>{
+    const google=em.indexOf(SYNTH)<0;    /* حساب جوجل حقيقي، مش اسم مستخدم وباسورد */
+    return {id:em,email:em,name:names[em]||em,un:unames[em]||'',role:roles[em],google:google,
+      owner:!!(c.owner&&uids[em]===c.owner),pending:google&&!uids[em]};
+  });
 }
 
 async function attachCar(){
@@ -1085,6 +1416,10 @@ async function attachCar(){
     const o=$('#luOut'); if(o)o.onclick=doLogout;
     return;
   }
+  /* حساب جوجل المدير ضافه ولسه أول مرة يدخل: يربط نفسه */
+  if(fbUser && c.owner!==fbUser.uid && !((c.uids||{})[MYEMAIL])){
+    try{ await carRef.update(FP('uids',MYEMAIL),fbUser.uid); }catch(e){ console.warn('claim',e); }
+  }
   setRealRole(r); MODE='db'; CAN_WRITE=true; hideLogin();
 
   /* خروج إجباري لكل الأجهزة */
@@ -1103,6 +1438,8 @@ async function attachCar(){
     try{CAR.bio=localStorage.getItem(LS+'.bio')==='1';}catch(e){}
     if(d.perms)mergePerms(d.perms);
     USERS=usersFromCar(d);
+    MY_DISPLAY=((d.names||{})[MYEMAIL])||MYNAME||MYEMAIL.split('@')[0];
+    MY_LOGIN=((d.unames||{})[MYEMAIL])||MYEMAIL;
     healCarMaps(d);
     /* التحديث من السيرفر مابيلغيش وضع التجربة؛ ولو المدير شالك تخرج */
     const nr=roleOf(d); if(!nr){doLogout();return;} setRealRole(nr);
@@ -1118,6 +1455,12 @@ async function attachCar(){
     LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
     LOADED.logs=1; render();
   },e=>console.warn(e)));
+
+  /* سجل التعديلات للجرس */
+  UNSUB.push(carRef.collection('events').orderBy('at','desc').limit(60).onSnapshot(s=>{
+    EVENTS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
+    if(TAB==='notifs') render(); else updateBell();
+  },e=>console.warn('events',e)));
 }
 
 /* ── إدارة المستخدمين (المدير) ──
@@ -1165,16 +1508,31 @@ async function createUser(name,username,pw,role){
   await carRef.update(FP('roles',email),role, FP('names',email),name||username,
     FP('unames',email),username, FP('uids',email),uid,
     'emails',firebase.firestore.FieldValue.arrayUnion(email));
+  logEvent('user','ضاف '+(name||username)+' — '+(ROLE_NM[role]||role));
+}
+/* إضافة حساب جوجل: بيتسجل بالإيميل، والـ uid بيتربط أول ما الشخص يدخل */
+async function addGoogleUser(name,email,role){
+  email=String(email||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('اكتب إيميل جوجل صح');
+  if(email.indexOf(SYNTH)>=0) throw new Error('ده مش إيميل جوجل');
+  if(USERS.some(u=>u.email===email)) throw new Error('الحساب ده مضاف قبل كده');
+  await carRef.update(FP('roles',email),role, FP('names',email),name||email.split('@')[0],
+    'emails',firebase.firestore.FieldValue.arrayUnion(email));
+  logEvent('user','ضاف '+(name||email)+' — '+(ROLE_NM[role]||role));
 }
 async function updateUser(email,name,role){
+  const old=USERS.find(u=>u.email===email);
   await carRef.update(FP('roles',email),role, FP('names',email),name);
+  if(old&&old.role!==role) logEvent('user','غيّر صلاحية '+name+' لـ '+(ROLE_NM[role]||role));
 }
 async function removeUser(email,username){
+  const old=USERS.find(u=>u.email===email);
   const DEL=firebase.firestore.FieldValue.delete();
   await carRef.update(FP('roles',email),DEL, FP('names',email),DEL,
     FP('unames',email),DEL, FP('uids',email),DEL,
     'emails',firebase.firestore.FieldValue.arrayRemove(email));
   if(username) await FS.collection('carUsernames').doc(username).delete().catch(()=>{});
+  logEvent('user','شال '+((old&&old.name)||username||email)+' من البرنامج');
 }
 async function forceExitAll(){
   await carRef.update({forceExit:Date.now()});
@@ -1204,6 +1562,12 @@ async function checkVersion(){
     setInterval(checkVersion,600000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion();});
   }
+
+  /* قفل البصمة + إشعارات التحديث */
+  (async()=>{ LOCK_OK=await lockSupported();
+    if(LOCK_OK&&lockCred){ showLock(); tryUnlock(); }
+    if(TAB==='cfg') render(); })();
+  setTimeout(checkUpdates,2500);
 
   if(!cfgReady()||typeof firebase==='undefined'){ startLocal(); return; }
 

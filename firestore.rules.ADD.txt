@@ -16,6 +16,17 @@
       return r == 'admin' ? 'edit' : r == '' ? 'none' : c.get('perms', {}).get(r, {}).get(p, 'none');
     }
     function skMember(c) { return skRole(c) != ''; }
+    // حساب جوجل المدير ضافه ولسه مادخلش: يقدر يقرا العربية ويربط الـ uid بتاعه بس
+    function skPending(c) {
+      return request.auth != null && request.auth.token.get('email_verified', false) == true
+        && c.get('roles', {}).get(skEmail(), '') != ''
+        && !(skEmail() in c.get('uids', {}));
+    }
+    function skClaimOk(c, n) {
+      return skPending(c) && n.diff(c).affectedKeys().hasOnly(['uids'])
+        && n.uids.diff(c.get('uids', {})).affectedKeys().hasOnly([skEmail()])
+        && n.uids[skEmail()] == request.auth.uid;
+    }
     function skAdmin(c)  { return skRole(c) == 'admin'; }
     // تعديل مستند العربية: المدير أي حاجة (ماعدا صاحب البرنامج)، والباقي العداد وبيانات العربية حسب الجدول
     function skCarUpdateOk(c, n) {
@@ -30,12 +41,13 @@
     }
 
     match /cars/{cid} {
-      allow get:    if request.auth != null && (resource == null || skMember(resource.data));
+      allow get:    if request.auth != null && (resource == null || skMember(resource.data) || skPending(resource.data));
       allow list:   if false;
       allow create: if request.auth != null
                     && request.resource.data.owner == request.auth.uid
                     && request.resource.data.roles.keys().hasOnly([skEmail()]);
-      allow update: if skCarUpdateOk(resource.data, request.resource.data);
+      allow update: if skCarUpdateOk(resource.data, request.resource.data)
+                    || skClaimOk(resource.data, request.resource.data);
       allow delete: if false;
 
       match /items/{itemId} {
@@ -51,6 +63,17 @@
         allow create: if skPerm(skCar(cid), 'addlog') == 'edit'
                       && request.resource.data.km is number && request.resource.data.km >= 0;
         allow delete: if skPerm(skCar(cid), 'addlog') == 'edit';
+        allow update: if false;
+      }
+      // سجل التعديلات (الجرس)
+      match /events/{eid} {
+        allow read:   if skMember(skCar(cid));
+        allow create: if skMember(skCar(cid))
+                      && request.resource.data.by == request.auth.uid
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() < 300
+                      && request.resource.data.at is number;
+        allow delete: if skAdmin(skCar(cid));
         allow update: if false;
       }
     }

@@ -210,7 +210,7 @@ nav.tabs button.on{color:var(--em2)}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><img src="icons/app.png" alt="SKODA"></div>
+    <div class="brand"><img src="icons/app.png" alt="" onerror="this.replaceWith(document.createTextNode('🚗'))"></div>
     <div style="flex:1;min-width:0">
       <div class="ttl" id="hTtl">SKODA A4</div>
       <div class="sub" id="hSub">صيانة العربية</div>
@@ -232,7 +232,7 @@ nav.tabs button.on{color:var(--em2)}
 <!-- شاشة الدخول -->
 <div class="login hide" id="login">
   <div class="lgbox">
-    <div class="lglogo"><img src="icons/app.png" alt=""></div>
+    <div class="lglogo"><img src="icons/app.png" alt="" onerror="this.parentNode.style.display='grid';this.parentNode.style.placeItems='center';this.parentNode.style.fontSize='44px';this.replaceWith(document.createTextNode('🚗'))"></div>
     <h2>صيانة سكودا A4</h2>
     <p class="lgsub">ادخل بحسابك عشان البيانات تتزامن بينك وبين اللي معاك</p>
     <div id="lgBody"></div>

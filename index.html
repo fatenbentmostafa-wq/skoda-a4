@@ -628,12 +628,10 @@ function render(){
 function vHome(){
   if(!canSee('maint')){$('#view').innerHTML='<div class="empty"><span class="big">🔒</span>مالكش صلاحية تشوف الصفحة دي.</div>';return;}
   const items=liveItems().slice().sort(byUrgency);
-  /* زيت الموتور + الفلتر أول حاجة على طول، والباقي متقسم حسب الحالة */
-  const oil=items.find(i=>i.id==='oil'), others=items.filter(i=>i.id!=='oil');
-  const bad=others.filter(i=>itemState(i).st==='bad');
-  const warn=others.filter(i=>itemState(i).st==='warn');
-  const rest=others.filter(i=>['ok','unknown'].indexOf(itemState(i).st)>=0);
-  const oilBad=oil&&['bad','warn'].indexOf(itemState(oil).st)>=0;
+  /* زيت الموتور + الفلتر أول بند في أي قايمة (الترتيب في byUrgency) */
+  const bad=items.filter(i=>itemState(i).st==='bad');
+  const warn=items.filter(i=>itemState(i).st==='warn');
+  const rest=items.filter(i=>['ok','unknown'].indexOf(itemState(i).st)>=0);
   let h='';
 
   h+='<div class="odo"><div class="lbl">عداد الكيلومترات</div>'
@@ -644,8 +642,7 @@ function vHome(){
       +'<button class="btn gold" data-a="cam">📷 صوّر العداد</button></div>':'')
    + '</div>';
 
-  if(oil) h+=tiles([oil]);
-  if(!bad.length&&!warn.length&&!oilBad&&items.length){
+  if(!bad.length&&!warn.length&&items.length){
     h+='<div class="allgood"><span class="big">✅</span><b>كله تمام</b>'
      + '<small>مفيش حاجة محتاجة صيانة دلوقتي</small></div>';
   }
@@ -772,6 +769,7 @@ function vCfg(){
     h+='<h3 style="color:var(--em2)">متزامن مع السيرفر</h3>'
      + '<div class="tiny" style="margin:-6px 0 12px;font-size:13px" dir="ltr">'+esc(MY_LOGIN||MYEMAIL)+'</div>'
      + '<div class="tiny" style="margin:-8px 0 12px">داخل باسم <b>'+esc(MY_DISPLAY||'—')+'</b> · '+esc(ROLE_NM[REAL_ROLE]||REAL_ROLE)+'</div>'
+     + '<button class="btn block" data-a="sync" style="margin-bottom:8px">🔄 مزامنة مع السيرفر</button>'
      + (admin?'<button class="btn ghost block" data-a="users" style="margin-bottom:8px">👥 المستخدمين والصلاحيات</button>':'')
      + '<button class="btn ghost block" data-a="out">خروج من الحساب</button>'
      + (admin?'<button class="btn danger block" data-a="force" style="margin-top:8px">🚪 خروج إجباري لكل الأجهزة</button>'
@@ -835,6 +833,7 @@ function vCfg(){
 
   const lk=$('#view [data-a="lock"]'); if(lk)lk.onclick=toggleLock;
   const us=$('#view [data-a="users"]'); if(us)us.onclick=()=>{TAB='users';render();};
+  const sy=$('#view [data-a="sync"]'); if(sy)sy.onclick=()=>syncNow(sy);
   const out=$('#view [data-a="out"]'); if(out)out.onclick=()=>{if(confirm('تخرج من حسابك؟'))doLogout();};
   const inn=$('#view [data-a="in"]'); if(inn)inn.onclick=()=>{showLogin();};
   const fx=$('#view [data-a="force"]'); if(fx)fx.onclick=()=>{
@@ -1620,6 +1619,19 @@ async function refreshNow(){
   } finally { setTimeout(()=>b.classList.remove('spin'),600); }
 }
 $('#rfBtn').onclick=refreshNow;
+/* زرار المزامنة في الإعدادات: لو فيه نسخة جديدة يحدّث البرنامج، ولو مفيش يجيب آخر داتا ويعيد تحميل البرنامج */
+async function syncNow(btn){
+  if(btn){ btn.disabled=true; btn.textContent='⏳ بزامن…'; }
+  try{ const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(r) await r.update(); }catch(e){}
+  let v=null; try{ v=await serverVersion(); }catch(e){}
+  if(v&&MY_VER&&v!==MY_VER){ PENDING_VER=v; toast('فيه نسخة جديدة — بحدّث البرنامج…'); setTimeout(applyUpdate,600); return; }
+  if(MODE==='db'&&carRef){
+    await Promise.all([carRef.get({source:'server'}),carRef.collection('items').get({source:'server'}),
+      carRef.collection('logs').get({source:'server'})]).catch(()=>{});
+  }
+  toast('اتزامن ✓ — بعيد تحميل البرنامج');
+  setTimeout(()=>{ try{ sessionStorage.setItem(LS+'.nolock',String(Date.now())); }catch(e){} location.reload(); },700);
+}
 
 /* ── الإقلاع ── */
 (function boot(){

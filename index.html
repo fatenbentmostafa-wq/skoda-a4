@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0a1411">
 <title>SKODA A4 — صيانة العربية</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/app-192.png">
-<link rel="apple-touch-icon" href="icons/app-192.png">
+<link rel="icon" href="app-192.png">
+<link rel="apple-touch-icon" href="app-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -210,7 +210,7 @@ nav.tabs button.on{color:var(--em2)}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><img src="icons/app.png" alt="" onerror="this.replaceWith(document.createTextNode('🚗'))"></div>
+    <div class="brand"><img src="app.png" alt="" onerror="this.replaceWith(document.createTextNode('🚗'))"></div>
     <div style="flex:1;min-width:0">
       <div class="ttl" id="hTtl">SKODA A4</div>
       <div class="sub" id="hSub">صيانة العربية</div>
@@ -232,7 +232,7 @@ nav.tabs button.on{color:var(--em2)}
 <!-- شاشة الدخول -->
 <div class="login hide" id="login">
   <div class="lgbox">
-    <div class="lglogo"><img src="icons/app.png" alt="" onerror="this.parentNode.style.display='grid';this.parentNode.style.placeItems='center';this.parentNode.style.fontSize='44px';this.replaceWith(document.createTextNode('🚗'))"></div>
+    <div class="lglogo"><img src="app.png" alt="" onerror="this.parentNode.style.display='grid';this.parentNode.style.placeItems='center';this.parentNode.style.fontSize='44px';this.replaceWith(document.createTextNode('🚗'))"></div>
     <h2>صيانة سكودا A4</h2>
     <p class="lgsub">ادخل بحسابك عشان البيانات تتزامن بينك وبين اللي معاك</p>
     <div id="lgBody"></div>
@@ -268,7 +268,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 /* ══════════════ البنود الافتراضية ══════════════
    ic = أيقونة. دلوقتي إيموچي — تتبدل بصور الأيقونات اللي هيبعتها المستخدم:
    حط رابط/ملف الصورة في icImg وهي تتعرض مكان الإيموچي تلقائيًا. */
-const I='icons/';
+const I='';
 const DEFAULT_ITEMS=[
  {id:'oil',      img:I+'oil.png',      ic:'🛢️', nm:'زيت الموتور + الفلتر', km:5000,  mo:6,  on:true, ord:1,  tip:'المعدني كل 5000، الصناعي يوصل 10000'},
  {id:'plugs',    img:I+'plugs.png',    ic:'🔌', nm:'البوجيهات',            km:30000, mo:0,  on:true, ord:2,  tip:'النحاس 30 ألف، الإريديوم 60-90 ألف'},

@@ -42,7 +42,7 @@ header.top{display:flex;align-items:center;gap:11px;margin-bottom:14px}
 .ttl{font-weight:700;font-size:17px;line-height:1.25}
 .sub{color:var(--muted);font-size:11.5px;margin-top:2px}
 .who{background:#13302a;border:1px solid var(--line);color:var(--gold2);border-radius:20px;
-  padding:5px 11px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  padding:5px 11px;font-size:11.5px;font-weight:600;white-space:nowrap;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
 
 /* ===== odometer ===== */
 .odo{background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid var(--line);
@@ -367,12 +367,13 @@ const PERM_ROWS=[
  {p:'items', nm:'تعديل البنود والمدد', ed:1},
  {p:'car',   nm:'بيانات العربية',      ed:1},
  {p:'costs', nm:'المصاريف والتكاليف',  ed:0},
- {p:'backup',nm:'النسخة الاحتياطية',   ed:1}
+ {p:'backup',nm:'النسخة الاحتياطية',   ed:1},
+ {p:'share', nm:'إرسال البرنامج لحد',  ed:0}
 ];
 const DEF_PERMS={
-  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit'},
-  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',items:'none',car:'view',costs:'view',backup:'none'},
-  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',items:'none',car:'none',costs:'none',backup:'none'}
+  admin :{maint:'edit',odo:'edit',addlog:'edit',log:'edit',items:'edit',car:'edit',costs:'edit',backup:'edit',share:'edit'},
+  editor:{maint:'view',odo:'edit',addlog:'edit',log:'view',items:'none',car:'view',costs:'view',backup:'none',share:'view'},
+  viewer:{maint:'view',odo:'none',addlog:'none',log:'view',items:'none',car:'none',costs:'none',backup:'none',share:'none'}
 };
 const ROLE_NM={admin:'المدير',editor:'محرر',viewer:'مشاهد'};
 
@@ -611,7 +612,8 @@ const icOf=it=>{
 function render(){
   $('#hTtl').textContent=CAR.nm||'SKODA A4';
   $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
-  $('#hWho').textContent=(ROLE_NM[ROLE]||'')+(PREVIEW?' (تجربة)':'');
+  /* اسم الشخص الداخل بدل «المدير/محرر/مشاهد» — وفي وضع التجربة بيبان الدور */
+  $('#hWho').textContent=PREVIEW?(ROLE_NM[ROLE]||'')+' (تجربة)':(MODE==='db'&&MY_DISPLAY?MY_DISPLAY:(ROLE_NM[ROLE]||''));
   /* الصفحات الفرعية بتنوّر التاب بتاعها */
   const navOn=TAB==='users'?'cfg':TAB==='notifs'?'':TAB;
   $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===navOn));
@@ -803,8 +805,8 @@ function vCfg(){
      + '</div>';
   }
 
-  /* ابعت البرنامج لحد — زي مصاريف البيت */
-  h+='<div class="card"><h3>📲 ابعت البرنامج لحد</h3>'
+  /* ابعت البرنامج لحد — زي مصاريف البيت (محكومة بصلاحية share) */
+  if(canSee('share')) h+='<div class="card"><h3>📲 ابعت البرنامج لحد</h3>'
    + '<div class="tiny" style="margin:-4px 0 10px">بيتبعت لينك تنزيل التطبيق للأندرويد ولينك فتحه من المتصفح للآيفون أو الكمبيوتر. '
    + 'الشخص هيحتاج إنك تضيفه من «المستخدمين» عشان يقدر يدخل.</div>'
    + '<div class="grid2"><button class="btn" data-a="shwa">📲 ابعته واتساب</button>'

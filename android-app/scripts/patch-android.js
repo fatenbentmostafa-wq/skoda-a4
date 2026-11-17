@@ -24,7 +24,9 @@ const PERMS = [
   "android.permission.CAMERA",
   "android.permission.USE_BIOMETRIC",
   "android.permission.USE_FINGERPRINT",
-  "android.permission.POST_NOTIFICATIONS"
+  "android.permission.POST_NOTIFICATIONS",
+  "android.permission.ACCESS_COARSE_LOCATION",
+  "android.permission.ACCESS_FINE_LOCATION"
 ];
 PERMS.forEach(function (p) {
   if (man.indexOf(p) < 0) {

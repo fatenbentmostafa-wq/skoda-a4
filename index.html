@@ -1065,6 +1065,7 @@ async function attachCar(){
     try{CAR.bio=localStorage.getItem(LS+'.bio')==='1';}catch(e){}
     if(d.perms)mergePerms(d.perms);
     USERS=usersFromCar(d);
+    healCarMaps(d);
     const nr=roleOf(d); if(nr)ROLE=nr;
     LOADED.car=1; render();
   },e=>console.warn(e)));
@@ -1080,7 +1081,35 @@ async function attachCar(){
   },e=>console.warn(e)));
 }
 
-/* ── إدارة المستخدمين (المدير) ── */
+/* ── إدارة المستخدمين (المدير) ──
+   الإيميل فيه نقط، ولو اتبعت كنص في update فايرستور بيفهمه خانات متداخلة.
+   FP بتخلّي الإيميل كله اسم خانة واحدة. */
+function FP(a,b){ return new firebase.firestore.FieldPath(a,b); }
+function flatPairs(obj,prefix,out){
+  Object.keys(obj||{}).forEach(k=>{
+    const v=obj[k], key=prefix?prefix+'.'+k:k;
+    if(v&&typeof v==='object'&&!Array.isArray(v)) flatPairs(v,key,out);
+    else out.push([key,v]);
+  });
+  return out;
+}
+/* بيصلّح المستخدمين اللي اتكتبوا غلط قبل كده */
+async function healCarMaps(d){
+  if(!carRef||!fbUser||!d||d.owner!==fbUser.uid) return;
+  const DEL=firebase.firestore.FieldValue.delete(), ops=[];
+  ['roles','names','unames','uids'].forEach(k=>{
+    const m=d[k]||{};
+    Object.keys(m).forEach(top=>{
+      if(top.indexOf('@')>=0) return;
+      const v=m[top];
+      if(v&&typeof v==='object'&&!Array.isArray(v)){
+        flatPairs(v,top,[]).forEach(p=>{ if(p[0].indexOf('@')>=0) ops.push(FP(k,p[0]),p[1]); });
+      }
+      ops.push(FP(k,top),DEL);
+    });
+  });
+  if(ops.length) try{ await carRef.update.apply(carRef,ops); }catch(e){}
+}
 async function createUser(name,username,pw,role){
   username=(username||'').trim().toLowerCase();
   if(!/^[a-z0-9._-]{3,}$/.test(username)) throw new Error('اسم المستخدم لازم يكون حروف إنجليزي وأرقام، 3 على الأقل');
@@ -1094,24 +1123,18 @@ async function createUser(name,username,pw,role){
   try{ await SEC.auth().signOut(); }catch(e){}
   await FS.collection('carUsernames').doc(username).set({email:email,car:CAR_ID});
   await FS.collection('carLogins').doc(uid).set({car:CAR_ID,email:email});
-  const u={};
-  u['roles.'+email]=role; u['names.'+email]=name||username;
-  u['unames.'+email]=username; u['uids.'+email]=uid;
-  u.emails=firebase.firestore.FieldValue.arrayUnion(email);
-  await carRef.update(u);
+  await carRef.update(FP('roles',email),role, FP('names',email),name||username,
+    FP('unames',email),username, FP('uids',email),uid,
+    'emails',firebase.firestore.FieldValue.arrayUnion(email));
 }
 async function updateUser(email,name,role){
-  const u={}; u['roles.'+email]=role; u['names.'+email]=name;
-  await carRef.update(u);
+  await carRef.update(FP('roles',email),role, FP('names',email),name);
 }
 async function removeUser(email,username){
-  const u={};
-  u['roles.'+email]=firebase.firestore.FieldValue.delete();
-  u['names.'+email]=firebase.firestore.FieldValue.delete();
-  u['unames.'+email]=firebase.firestore.FieldValue.delete();
-  u['uids.'+email]=firebase.firestore.FieldValue.delete();
-  u.emails=firebase.firestore.FieldValue.arrayRemove(email);
-  await carRef.update(u);
+  const DEL=firebase.firestore.FieldValue.delete();
+  await carRef.update(FP('roles',email),DEL, FP('names',email),DEL,
+    FP('unames',email),DEL, FP('uids',email),DEL,
+    'emails',firebase.firestore.FieldValue.arrayRemove(email));
   if(username) await FS.collection('carUsernames').doc(username).delete().catch(()=>{});
 }
 async function forceExitAll(){

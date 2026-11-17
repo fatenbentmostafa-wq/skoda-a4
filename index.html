@@ -464,7 +464,7 @@ function vHome(){
   $$('#view [data-a="odo"]').forEach(b=>b.onclick=shOdo);
   $$('#view [data-a="cam"]').forEach(b=>b.onclick=shCam);
   $$('#view [data-a="all"]').forEach(b=>b.onclick=()=>{SHOW_ALL=!SHOW_ALL;render();});
-  $('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id,true));
+  $$('#view .irow').forEach(t=>t.onclick=()=>shItem(t.dataset.id));
 }
 /* صفحة الصيانة: أيقونة واسم البند بس — التفاصيل تتفتح بالضغط */
 function tiles(list){
@@ -726,7 +726,7 @@ function loadOCR(){
 }
 
 /* ---- تفاصيل بند ---- */
-function shItem(id,ro){
+function shItem(id){
   const it=itemById(id); if(!it)return;
   const s=itemState(it);
   const mine=LOGS.filter(l=>l.itemId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -747,9 +747,8 @@ function shItem(id,ro){
    +'</div>'
    +'<div class="bar"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div></div>'
    +(it.tip?'<div class="tiny" style="margin:-4px 0 10px">💡 '+esc(it.tip)+'</div>':'');
-  if(ro) h+='<div class="tiny" style="margin:4px 0 10px">للتسجيل أو تعديل الميعاد روح صفحة «السجل».</div>';
-  if(!ro && canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
-  if(!ro && canEdit('items')){
+  if(canEdit('addlog')) h+='<button class="btn gold block" id="iLog" style="margin-bottom:9px">✅ سجّل إنه اتعمل دلوقتي</button>';
+  if(canEdit('items')){
     h+='<div class="card"><h3 style="font-size:13px">تعديل الميعاد</h3><div class="grid2">'
      +'<label class="f"><span>كل كام كم</span><input id="eK" inputmode="numeric" value="'+esc(it.km||0)+'"></label>'
      +'<label class="f"><span>كل كام شهر</span><input id="eM" inputmode="numeric" value="'+esc(it.mo||0)+'"></label>'
@@ -948,7 +947,19 @@ function loginErr(t){ const e=$('#luErr'); if(e){e.style.display='block';e.textC
 function wireLogin(){
   const go=$('#luGo'); if(go)go.onclick=doUserLogin;
   const p=$('#luP'); if(p)p.onkeydown=e=>{if(e.key==='Enter')doUserLogin();};
-  const g=$('#luG'); if(g)g.onclick=()=>{ AUTH.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); };
+  const g=$('#luG'); if(g)g.onclick=async()=>{
+    const p=new firebase.auth.GoogleAuthProvider();
+    p.setCustomParameters({prompt:'select_account'});
+    g.disabled=true;
+    try{ await AUTH.signInWithPopup(p); }
+    catch(e){
+      if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'||e.code==='auth/cancelled-popup-request')){
+        try{ await AUTH.signInWithRedirect(p); return; }catch(e2){}
+      }
+      g.disabled=false;
+      if(e&&e.code!=='auth/popup-closed-by-user') loginErr('مقدرتش أدخل بجوجل — جرّب تاني');
+    }
+  };
   const off=$('#luOff'); if(off)off.onclick=()=>startLocal('شغّال على الجهاز ده بس');
 }
 async function doUserLogin(){

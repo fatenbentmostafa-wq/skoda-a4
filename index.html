@@ -1006,9 +1006,11 @@ async function attachCar(){
   carRef=FS.collection('cars').doc(CAR_ID);
   let snap;
   try{ snap=await carRef.get(); }
-  catch(e){ showLogin('<div class="note">مقدرتش أوصل للبيانات. اتأكد إن قواعد الأمان اتنشرت.</div>'
-      +'<button class="btn ghost block" id="luOff" style="margin-top:12px">استخدام على الجهاز ده</button>');
-    wireLogin(); return; }
+  catch(e){ showLogin('<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.</div>'
+      +'<button class="btn gold block" id="luRetry" style="margin:10px 0">🔄 جرّب تاني</button>'
+      +'<button class="btn ghost block" id="luOff">استخدام على الجهاز ده</button>');
+    const rt=$('#luRetry'); if(rt)rt.onclick=()=>{rt.disabled=true;attachCar();};
+    return; }
 
   if(!snap.exists){
     /* أول مرة: اللي فتح البرنامج يبقى صاحبه */
@@ -1138,6 +1140,9 @@ async function checkVersion(){
   try{
     firebase.initializeApp(window.FB_CONFIG);
     FS=firebase.firestore(); AUTH=firebase.auth();
+    /* جوا WebView الأندرويد قناة Firestore العادية بتفشل — بنجبره على long polling */
+    try{ FS.settings(IS_APP?{experimentalForceLongPolling:true,merge:true}
+                           :{experimentalAutoDetectLongPolling:true,merge:true}); }catch(e){}
     FS.enablePersistence({synchronizeTabs:true}).catch(()=>{});
   }catch(e){ startLocal(); return; }
 

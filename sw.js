@@ -1,6 +1,6 @@
 /* SKODA A4 — Service Worker
    كل ما تعدّل في index.html زوّد الرقم ده واحد: v1 -> v2 -> v3 ... */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "skoda-" + VERSION;
 
 /* الملفات اللي بتتخزن للاستخدام من غير نت */
@@ -9,8 +9,8 @@ const SHELL = [
   "./index.html",
   "./offline.html",
   "./manifest.json",
-  "./icons/app-192.png",
-  "./icons/app-512.png"
+  "./app-192.png",
+  "./app-512.png"
 ];
 
 self.addEventListener("install", e => {

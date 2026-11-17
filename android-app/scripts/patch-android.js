@@ -91,4 +91,20 @@ if (fs.existsSync(ICON)) {
   console.log("+ icon");
 }
 
+/* 5) دخول جوجل من جوه التطبيق (زي مصاريف البيت) */
+const VARS = path.join(AND, "variables.gradle");
+if (fs.existsSync(VARS)) {
+  let v = fs.readFileSync(VARS, "utf8");
+  if (v.indexOf("rgcfaIncludeGoogle") < 0) {
+    v = v.replace(/ext\s*\{/, "ext {\n    rgcfaIncludeGoogle = true");
+    fs.writeFileSync(VARS, v);
+    console.log("+ google sign-in");
+  }
+}
+const GS = path.join(ROOT, "google-services.json");
+if (fs.existsSync(GS)) {
+  fs.copyFileSync(GS, path.join(AND, "app/google-services.json"));
+  console.log("+ google-services.json");
+}
+
 console.log("android project patched - version 1.0." + run);

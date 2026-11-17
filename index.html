@@ -445,6 +445,17 @@ function lsLoad(){try{const r=localStorage.getItem(LS);if(!r)return false;const 
   if(d.items)ITEMS=d.items; if(d.logs)LOGS=d.logs; if(d.users)USERS=d.users;
   if(d.perms)mergePerms(d.perms);
   return true;}catch(e){return false;}}
+/* آخر داتا جت من السيرفر: بتتعرض على طول وقت الفتح لحد ما السيرفر يرد — الشاشة ماتفضاش وترجع */
+const DBC=LS+'.dbc';
+let _dbcT=null;
+function dbcSave(){ if(MODE!=='db')return; clearTimeout(_dbcT); _dbcT=setTimeout(()=>{ try{
+  localStorage.setItem(DBC,JSON.stringify({car:CAR,items:ITEMS,logs:LOGS,users:USERS,perms:PERMS,role:REAL_ROLE,me:MY_DISPLAY}));
+}catch(e){} },400); }
+function dbcLoad(){ try{ const d=JSON.parse(localStorage.getItem(DBC)||'null'); if(!d)return false;
+  if(d.car)CAR=Object.assign({},DEFAULT_CAR,d.car);
+  if(d.items)ITEMS=d.items; if(d.logs)LOGS=d.logs; if(d.users)USERS=d.users;
+  if(d.perms)mergePerms(d.perms); if(d.role)setRealRole(d.role); if(d.me)MY_DISPLAY=d.me;
+  return true; }catch(e){ return false; } }
 
 /* الصلاحيات */
 function mergePerms(src){
@@ -1529,7 +1540,7 @@ async function doUserLogin(){
     $('#luGo').disabled=false;
   }
 }
-function doLogout(){ try{AUTH.signOut();}catch(e){} location.reload(); }
+function doLogout(){ try{localStorage.removeItem(DBC);}catch(e){} try{AUTH.signOut();}catch(e){} location.reload(); }
 
 function unsubAll(){ UNSUB.forEach(f=>{try{f();}catch(e){}}); UNSUB=[]; }
 
@@ -1620,17 +1631,17 @@ async function attachCar(){
     if(!CAR_OWNER){ CAR_OWNER=d.owner||''; setTimeout(sendLocation,1500); }
     /* التحديث من السيرفر مابيلغيش وضع التجربة؛ ولو المدير شالك تخرج */
     const nr=roleOf(d); if(!nr){doLogout();return;} setRealRole(nr);
-    LOADED.car=1; render();
+    LOADED.car=1; render(); dbcSave();
   },e=>{console.warn(e); if(e&&e.code==='permission-denied')doLogout();}));
 
   UNSUB.push(carRef.collection('items').onSnapshot(s=>{
     ITEMS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    normalize(); LOADED.items=1; render();
+    normalize(); LOADED.items=1; render(); dbcSave();
   },e=>console.warn(e)));
 
   UNSUB.push(carRef.collection('logs').onSnapshot(s=>{
     LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    LOADED.logs=1; render();
+    LOADED.logs=1; render(); dbcSave();
   },e=>console.warn(e)));
 
   /* سجل التعديلات للجرس */
@@ -1773,8 +1784,8 @@ async function syncNow(btn){
     await Promise.all([carRef.get({source:'server'}),carRef.collection('items').get({source:'server'}),
       carRef.collection('logs').get({source:'server'})]).catch(()=>{});
   }
-  toast('اتزامن ✓ — بعيد تحميل البرنامج');
-  setTimeout(()=>{ try{ sessionStorage.setItem(LS+'.nolock',String(Date.now())); }catch(e){} reloadKeep(); },700);
+  /* الداتا شغالة لايف أصلًا — مفيش داعي نعيد تحميل البرنامج ونفضّي الشاشة */
+  render(); dbcSave(); toast('اتزامن ✓');
 }
 
 /* ── الإقلاع ── */
@@ -1807,6 +1818,7 @@ async function syncNow(btn){
     FS.enablePersistence({synchronizeTabs:true}).catch(()=>{});
   }catch(e){ startLocal(); return; }
 
+  if(dbcLoad()){ normalize(); CAN_WRITE=false; }
   render();
   AUTH.getRedirectResult().catch(e=>{ try{ loginErr('مقدرتش أدخل بجوجل — جرّب تاني'); }catch(x){} });
   AUTH.onAuthStateChanged(u=>{

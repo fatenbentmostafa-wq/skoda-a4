@@ -38,7 +38,7 @@ jobs:
           mkdir -p www/icons
           cp ../offline.html www/ 2>/dev/null || true
           cp ../manifest.json www/ 2>/dev/null || true
-          cp -r ../icons/. www/icons/ 2>/dev/null || true
+          cp ../*.png www/ 2>/dev/null || true
           printf '%s' '<!doctype html><meta http-equiv="refresh" content="0;url=https://fatenbentmostafa-wq.github.io/skoda-a4/">' > www/index.html
 
       - name: create android project
@@ -47,7 +47,12 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
       - name: app icon and splash
-        run: npx @capacitor/assets generate --android --assetPath resources || true
+        run: |
+          mkdir -p assets
+          cp ../icon.png assets/icon.png 2>/dev/null || cp ../app-512.png assets/icon.png 2>/dev/null || true
+          cp ../splash.png assets/splash.png 2>/dev/null || true
+          cp ../splash-dark.png assets/splash-dark.png 2>/dev/null || true
+          npx @capacitor/assets generate --android --assetPath assets || true
 
       - name: decode keystore
         env:

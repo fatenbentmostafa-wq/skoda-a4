@@ -27,7 +27,10 @@ body{
   color:var(--txt); font-family:'IBM Plex Sans Arabic',system-ui,-apple-system,'Segoe UI',sans-serif;
   min-height:100vh; padding:0 0 86px; font-size:15px;
 }
-.wrap{max-width:760px;margin:0 auto;padding:16px 14px 10px}
+.wrap{max-width:760px;margin:0 auto;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px))}
+/* شريط الساعة والشبكة فوق: مساحة فاضية بلون الخلفية عشان المحتوى مايدخلش تحته */
+body::before{content:'';position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:45;background:var(--bg)}
 button{font-family:inherit}
 .hidden{display:none!important}
 
@@ -261,6 +264,7 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 <nav class="tabs">
   <button data-tab="home" class="on"><i>🔧</i>الصيانة</button>
   <button data-tab="log"><i>📋</i>السجل</button>
+  <button data-tab="done"><i>🧾</i>اللي اتعمل</button>
   <button data-tab="cfg"><i>⚙️</i>الإعدادات</button>
 </nav>
 
@@ -488,7 +492,7 @@ function nfItems(){
         body:shortStat(s),go:'home',unread:s.st==='bad'&&read.indexOf(id)<0}; }):[];
   const feed=EVENTS.map(e=>({id:'ev:'+e.id,ic:e.t==='log'?'🧾':e.t==='odo'?'📏':e.t==='user'?'👤':e.t==='perms'?'🧮':e.t==='item'?'🧰':'✏️',
       title:e.title,body:[e.name,e.body].filter(Boolean).join(' · ')+(e.at?' · '+timeAgo(e.at):''),at:e.at||0,
-      go:e.t==='log'||e.t==='item'?'log':e.t==='odo'?'home':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
+      go:e.t==='log'?'done':e.t==='item'?'log':e.t==='odo'?'home':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
     .concat(NF.local.map(n=>Object.assign({},n,{body:(n.body||'')+(n.at?' · '+timeAgo(n.at):''),unread:read.indexOf(n.id)<0})))
     .sort((a,b)=>b.at-a.at);
   return {alerts,feed};
@@ -608,7 +612,7 @@ function render(){
   $('#banner').innerHTML=bn;
   if(TAB==='notifs')vNotifs();
   else if(TAB==='users'&&ROLE==='admin')vUsers();
-  else if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else {TAB='cfg';vCfg();}
+  else if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else if(TAB==='done')vDone(); else {TAB='cfg';vCfg();}
   updateBell();
   window.scrollTo(0,0);
 }
@@ -639,11 +643,10 @@ function vHome(){
   if(warn.length){
     h+='<div class="sec warn"><h2>⏳ قرّب ميعاده</h2><span class="cnt">'+warn.length+'</span></div>'+tiles(warn);
   }
+  /* كل البنود ظاهرة بأيقوناتها على طول */
   if(rest.length){
-    h+='<div class="sec"><h2>باقي البنود</h2><span class="cnt">'+rest.length+'</span>'
-     + '<button class="btn sm ghost" style="margin-inline-start:auto" data-a="all">'
-     + (SHOW_ALL?'إخفاء':'عرض الكل')+'</button></div>'
-     + (SHOW_ALL?tiles(rest):'');
+    h+='<div class="sec"><h2>'+(bad.length||warn.length?'باقي البنود':'البنود')+'</h2><span class="cnt">'+rest.length+'</span></div>'
+     + tiles(rest);
   }
   if(!items.length)
     h+='<div class="empty"><span class="big">🧰</span>مفيش بنود صيانة.<br>روح الإعدادات وحمّل القائمة الجاهزة.</div>';
@@ -667,15 +670,7 @@ function tiles(list){
 
 function vLog(){
   if(!canSee('log')){$('#view').innerHTML='<div class="empty"><span class="big">🔒</span>مالكش صلاحية تشوف الصفحة دي.</div>';return;}
-  const logs=LOGS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.ts||0)-(a.ts||0));
-  const money=canSee('costs');
-  const total=logs.reduce((s,l)=>s+(Number(l.cost)||0),0);
-  const yr=logs.filter(l=>(l.date||'').slice(0,4)===String(new Date().getFullYear()))
-               .reduce((s,l)=>s+(Number(l.cost)||0),0);
-  let h='<div class="chips"><div class="chip"><b>'+logs.length+'</b><small>عملية</small></div>'
-   + (money?'<div class="chip g"><b>'+nf(yr)+'</b><small>مصاريف السنة</small></div>'
-          +'<div class="chip g"><b>'+nf(total)+'</b><small>الإجمالي</small></div>':'')
-   + '</div>';
+  let h='';
   if(canEdit('addlog')) h+='<button class="btn block gold" data-a="new" style="margin-bottom:6px">＋ تسجيل غيار جديد</button>';
 
   h+='<div class="sec"><h2>🧰 بنود الصيانة والمواعيد</h2><span class="cnt">'+ITEMS.length+'</span>'
@@ -703,7 +698,28 @@ function vLog(){
      + (canEdit('items')?'<button class="btn sm danger" style="margin-top:7px" data-a="di" data-id="'+esc(it.id)+'">حذف</button>':'')
      + '</div></div>';
   });
+  $('#view').innerHTML=h;
+  const nb=$('#view [data-a="new"]'); if(nb)nb.onclick=()=>shLog(null);
+  const ni=$('#view [data-a="ni"]'); if(ni)ni.onclick=shNewItem;
+  $$('#view .row[data-id]').forEach(r=>r.onclick=()=>shItem(r.dataset.id));
+  $$('#view [data-a="di"]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const it=itemById(b.dataset.id);
+    if(confirm('تحذف بند «'+(it?it.nm:'')+'» نهائيًا؟'))delItem(b.dataset.id);});
+}
 
+/* صفحة «اللي اتعمل»: كل الغيارات اللي اتسجلت والمصاريف */
+function vDone(){
+  if(!canSee('log')){$('#view').innerHTML='<div class="empty"><span class="big">🔒</span>مالكش صلاحية تشوف الصفحة دي.</div>';return;}
+  const logs=LOGS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.ts||0)-(a.ts||0));
+  const money=canSee('costs');
+  const total=logs.reduce((s,l)=>s+(Number(l.cost)||0),0);
+  const yr=logs.filter(l=>(l.date||'').slice(0,4)===String(new Date().getFullYear()))
+               .reduce((s,l)=>s+(Number(l.cost)||0),0);
+  let h='<div class="chips"><div class="chip"><b>'+logs.length+'</b><small>عملية</small></div>'
+   + (money?'<div class="chip g"><b>'+nf(yr)+'</b><small>مصاريف السنة</small></div>'
+          +'<div class="chip g"><b>'+nf(total)+'</b><small>الإجمالي</small></div>':'')
+   + '</div>';
+  if(canEdit('addlog')) h+='<button class="btn block gold" data-a="new" style="margin-bottom:6px">＋ تسجيل غيار جديد</button>';
   h+='<div class="sec"><h2>🧾 اللي اتعمل</h2><span class="cnt">'+logs.length+'</span></div>';
   if(!logs.length) h+='<div class="empty"><span class="big">📋</span>لسه مفيش عمليات مسجّلة.</div>';
   logs.forEach(l=>{const it=itemById(l.itemId);
@@ -717,13 +733,8 @@ function vLog(){
      + '</div></div>';});
   $('#view').innerHTML=h;
   const nb=$('#view [data-a="new"]'); if(nb)nb.onclick=()=>shLog(null);
-  const ni=$('#view [data-a="ni"]'); if(ni)ni.onclick=shNewItem;
-  $$('#view .row[data-id]').forEach(r=>r.onclick=()=>shItem(r.dataset.id));
   $$('#view [data-a="dl"]').forEach(b=>b.onclick=e=>{e.stopPropagation();
     if(confirm('تحذف العملية دي؟'))delLog(b.dataset.id);});
-  $$('#view [data-a="di"]').forEach(b=>b.onclick=e=>{e.stopPropagation();
-    const it=itemById(b.dataset.id);
-    if(confirm('تحذف بند «'+(it?it.nm:'')+'» نهائيًا؟'))delItem(b.dataset.id);});
 }
 
 function vCfg(){

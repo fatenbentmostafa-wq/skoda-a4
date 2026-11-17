@@ -2,12 +2,13 @@
   "name": "skoda-a4-app",
   "version": "1.0.0",
   "private": true,
-  "description": "SKODA A4 — صيانة العربية (Capacitor wrapper) — نفس أدوات مصاريف البيت: بصمة، زرار رجوع، مشاركة",
+  "description": "SKODA A4 — صيانة العربية (Capacitor wrapper) — نفس أدوات مصاريف البيت: بصمة، زرار رجوع، مشاركة، دخول جوجل",
   "scripts": {
     "sync": "cap sync android",
     "patch": "node scripts/patch-android.js"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.0.0",
     "@capacitor/android": "^8.0.0",
     "@capacitor/app": "^8.0.0",
     "@capacitor/core": "^8.0.0",

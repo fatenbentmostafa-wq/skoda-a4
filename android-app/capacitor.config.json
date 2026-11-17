@@ -28,6 +28,12 @@
       "backgroundColor": "#0a1411",
       "androidSplashResourceName": "splash",
       "showSpinner": false
+    },
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": [
+        "google.com"
+      ]
     }
   }
 }

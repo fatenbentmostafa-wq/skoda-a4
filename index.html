@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#0a1411">
-<title>SKODA A4 — صيانة العربية</title>
+<title>صيانة العربية</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="app-192.png">
 <link rel="apple-touch-icon" href="app-192.png">
@@ -285,6 +285,18 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 .pk1 .ic{font-size:28px;line-height:1}
 .pk1 .ic img{width:42px;height:42px;object-fit:contain;border-radius:10px;display:block}
 .pk1.on{border-color:var(--em2);background:rgba(23,166,115,.16);box-shadow:inset 0 0 0 1px var(--em2)}
+/* ===== العربيات ===== */
+.carcard{display:flex;align-items:center;gap:13px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px;color:inherit;font:inherit;cursor:pointer;text-align:right}
+.carcard.on{border-color:var(--em2)}
+.carcard .cic{font-size:28px;width:54px;height:54px;flex:0 0 auto;display:grid;place-items:center;border-radius:15px;background:rgba(23,166,115,.12)}
+.carcard .nm{font-weight:700;font-size:16.5px}
+.carcard .ln{color:var(--muted);font-size:12.5px;margin-top:3px}
+.carcard .go{color:var(--muted);font-size:24px;flex:0 0 auto}
+.cchk{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.cchk1{display:flex;align-items:center;gap:7px;background:#0b1a16;border:1px solid var(--line);border-radius:12px;padding:8px 11px;font-size:13.5px;cursor:pointer}
+.cchk1 input{width:18px;height:18px;margin:0;accent-color:var(--em2)}
+#hTtl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hTtl.sw{cursor:pointer}
 </style>
 </head>
 <body>
@@ -308,6 +320,7 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 </div>
 
 <nav class="tabs">
+  <button data-tab="cars" style="display:none"><i>🚗</i>العربيات</button>
   <button data-tab="home" class="on"><i>🔧</i>الصيانة</button>
   <button data-tab="log"><i>📋</i>السجل</button>
   <button data-tab="done"><i>🧾</i>اللي اتعمل</button>
@@ -320,7 +333,7 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 <div class="login hide" id="login">
   <div class="lgbox">
     <div class="lglogo"><img src="app.png" alt=""></div>
-    <h2>صيانة سكودا A4</h2>
+    <h2>صيانة العربية</h2>
     <p class="lgsub">ادخل بحسابك عشان البيانات تتزامن بينك وبين اللي معاك</p>
     <div id="lgBody"></div>
   </div>
@@ -330,7 +343,7 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 <div class="lockscreen hidden" id="lockScreen">
   <div class="lgbox">
     <div class="lglogo"><img src="app.png" alt=""></div>
-    <h2>صيانة سكودا مقفولة</h2>
+    <h2>صيانة العربية مقفولة</h2>
     <p class="lgsub">افتح ببصمتك أو بالـ PIN بتاع الموبايل</p>
     <button class="btn gold block" id="unlockBtn" type="button">🔓 فتح</button>
     <div class="note hidden" id="lockErr" style="margin-top:12px"></div>
@@ -428,9 +441,11 @@ let REAL_ROLE='admin';            // الدور الحقيقي من Firebase
 let PREVIEW=null;                 // دور التجربة (للمدير بس) — null يعني مفيش تجربة
 function setRealRole(r){ REAL_ROLE=r; ROLE=PREVIEW||r; }
 /* بعد التحديث/المزامنة البرنامج يرجع على نفس الصفحة اللي كنت فيها */
-function reloadKeep(){ try{ sessionStorage.setItem('sk.tab',TAB==='notifs'?(PREV_TAB||'home'):TAB); }catch(e){} location.reload(); }
+function reloadKeep(){ try{ sessionStorage.setItem('sk.tab',TAB==='notifs'?(PREV_TAB||'home'):TAB);
+  if(CUR_CAR) sessionStorage.setItem('sk.car',CUR_CAR); }catch(e){} location.reload(); }
 let TAB=(()=>{ try{ const t=sessionStorage.getItem('sk.tab'); sessionStorage.removeItem('sk.tab');
-  return /^(home|log|done|cfg|users)$/.test(t||'')?t:'home'; }catch(e){ return 'home'; } })(), SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
+  return /^(home|log|done|cfg|users|cars)$/.test(t||'')?t:'home'; }catch(e){ return 'home'; } })(), SHOW_ALL=false, MODE='loading', CAN_WRITE=true;
+const BOOT_TAB=TAB;               // الصفحة اللي كنت فيها قبل تحديث البرنامج
 let PREV_TAB='home';              // الصفحة اللي كنت فيها قبل الإشعارات
 let ADD_MODE='pw';                // إضافة مستخدم: pw = اسم مستخدم وباسورد · google = حساب جوجل
 let EVENTS=[];                    // سجل التعديلات من السيرفر (الجرس)
@@ -449,12 +464,22 @@ function lsLoad(){try{const r=localStorage.getItem(LS);if(!r)return false;const 
 const DBC=LS+'.dbc';
 let _dbcT=null;
 function dbcSave(){ if(MODE!=='db')return; clearTimeout(_dbcT); _dbcT=setTimeout(()=>{ try{
-  localStorage.setItem(DBC,JSON.stringify({car:CAR,items:ITEMS,logs:LOGS,users:USERS,perms:PERMS,role:REAL_ROLE,me:MY_DISPLAY}));
+  localStorage.setItem(DBC,JSON.stringify({my:MY_CARS,cars:CARS,cur:CUR_CAR,car:CAR,items:ITEMS,logs:LOGS,users:USERS,perms:PERMS,role:REAL_ROLE,me:MY_DISPLAY}));
 }catch(e){} },400); }
+let DBC_CUR='';                   /* العربية اللي بنودها متخزنة في النسخة المحلية */
 function dbcLoad(){ try{ const d=JSON.parse(localStorage.getItem(DBC)||'null'); if(!d)return false;
-  if(d.car)CAR=Object.assign({},DEFAULT_CAR,d.car);
-  if(d.items)ITEMS=d.items; if(d.logs)LOGS=d.logs; if(d.users)USERS=d.users;
+  if(d.cars&&typeof d.cars==='object') CARS=d.cars;
+  MY_CARS=(d.my||[]).filter(id=>CARS[id]);
   if(d.perms)mergePerms(d.perms); if(d.role)setRealRole(d.role); if(d.me)MY_DISPLAY=d.me;
+  let keep=''; try{ keep=sessionStorage.getItem('sk.car')||''; }catch(e){}
+  /* أكتر من عربية: الفتح بيبدأ بشاشة العربيات — إلا لو البرنامج لسه متحدّث وإنت جوه عربية */
+  if(MY_CARS.length>1 && !(keep&&keep===d.cur)){
+    CUR_CAR=''; if(['cfg','users'].indexOf(TAB)<0) TAB='cars';
+  } else {
+    CUR_CAR=d.cur||''; DBC_CUR=CUR_CAR;
+    if(d.car)CAR=Object.assign({},DEFAULT_CAR,d.car);
+    if(d.items)ITEMS=d.items; if(d.logs)LOGS=d.logs; if(d.users)USERS=d.users;
+  }
   return true; }catch(e){ return false; } }
 
 /* الصلاحيات */
@@ -480,8 +505,8 @@ function writeErr(e){
   else toast('مقدرتش أحفظ — جرّب تاني');
 }
 async function W(fn){
-  if(MODE==='db'&&carRef){ try{ await fn(); }catch(e){ writeErr(e); } }
-  else lsSave();
+  if(MODE==='db'){ if(carRef){ try{ await fn(); }catch(e){ writeErr(e); } } return; }
+  lsSave();
 }
 /* بيتكتب مفاتيح الـ patch بس — عشان قواعد الأمان تفرّق بين تحديث العداد وبيانات العربية */
 async function saveCar(patch){Object.assign(CAR,patch);
@@ -522,21 +547,25 @@ async function delLog(id){
     if(prev) await markDone(it,prev.km,prev.date,true);
   }
   render();}
-async function savePerms(){ await W(()=>carRef.update({perms:clean(PERMS)})); render(); }
+async function savePerms(){
+  if(MODE==='db'){ const p=clean(PERMS);
+    for(const id of adminCars()){ try{ await carDoc(id).update({perms:p}); }catch(e){ writeErr(e); } } }
+  else lsSave();
+  render(); }
 async function saveUsers(){ lsSave(); render(); }
 
 /* ══════════════ الجرس: سجل التعديلات + التنبيهات + التحديثات ══════════════ */
 /* كل تعديل بيتسجل على السيرفر في cars/skodaA4/events عشان الباقيين يشوفوه */
-function logEvent(t,title,body){
-  if(MODE!=='db'||!carRef||!fbUser) return;
-  carRef.collection('events').add({t:t, title:String(title).slice(0,280), body:String(body||'').slice(0,480),
+function logEvent(t,title,body,ref){
+  ref=ref||carRef||(MY_CARS[0]&&carDoc(MY_CARS[0]));
+  if(MODE!=='db'||!ref||!fbUser) return;
+  ref.collection('events').add({t:t, title:String(title).slice(0,280), body:String(body||'').slice(0,480),
     by:fbUser.uid, name:MY_DISPLAY||MYEMAIL.split('@')[0], at:Date.now()}).catch(()=>{});
 }
 let _permLogT=null;
 function logPermsLater(){ clearTimeout(_permLogT); _permLogT=setTimeout(()=>logEvent('perms','عدّل جدول الصلاحيات'),4000); }
 
 /* ══ اللوكيشن: كل ما حد يفتح البرنامج موقعه بيوصل للمدير في الجرس ══ */
-let CAR_OWNER='';
 const LOC_EVERY=10*60000;          /* مرة كل ١٠ دقايق على الأكتر */
 function locUrl(e){
   if(!e||e.t!=='loc'||typeof e.lat!=='number'||typeof e.lng!=='number') return '';
@@ -544,7 +573,8 @@ function locUrl(e){
   return NATIVE?'geo:'+q+'?q='+q:'https://maps.google.com/?q='+q;
 }
 async function sendLocation(){
-  if(MODE!=='db'||!carRef||!fbUser||!CAR_OWNER||CAR_OWNER===fbUser.uid) return;
+  const lid=MY_CARS[0], lc=lid&&CARS[lid];
+  if(MODE!=='db'||!lc||!fbUser||lc.owner===fbUser.uid) return;
   if(!navigator.geolocation) return;
   try{ if(Date.now()-(+localStorage.getItem(LS+'.locAt')||0)<LOC_EVERY) return;
        localStorage.setItem(LS+'.locAt',String(Date.now())); }catch(e){}
@@ -552,7 +582,7 @@ async function sendLocation(){
   try{ const st=navigator.permissions&&await navigator.permissions.query({name:'geolocation'});
        if(!st||st.state!=='granted'){ allowAway(); setTimeout(()=>{awayOk=false;},30000); } }catch(e){}
   navigator.geolocation.getCurrentPosition(p=>{
-    carRef.collection('events').add({t:'loc',title:'فتح البرنامج',body:'',
+    carDoc(lid).collection('events').add({t:'loc',title:'فتح البرنامج',body:'',
       lat:+p.coords.latitude.toFixed(5),lng:+p.coords.longitude.toFixed(5),acc:Math.round(p.coords.accuracy||0),
       by:fbUser.uid,name:MY_DISPLAY||MYEMAIL.split('@')[0],at:Date.now()}).catch(()=>{});
   },()=>{ try{localStorage.removeItem(LS+'.locAt');}catch(e){} },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
@@ -579,7 +609,7 @@ function nfItems(){
         body:shortStat(s),go:'home',unread:s.st==='bad'&&read.indexOf(id)<0}; }):[];
   /* «البرنامج اتحدث» للكل؛ باقي الإشعارات واللوكيشن حسب جدول الصلاحيات */
   const feed=(canSee('notifs')?EVENTS:[]).map(e=>({id:'ev:'+e.id,ic:e.t==='loc'?'📍':e.t==='log'?'🧾':e.t==='odo'?'📏':e.t==='user'?'👤':e.t==='perms'?'🧮':e.t==='item'?'🧰':'✏️',
-      title:e.title,body:[e.name,e.body].filter(Boolean).join(' · ')+(e.at?' · '+timeAgo(e.at):''),at:e.at||0,
+      title:e.title,body:[MY_CARS.length>1?carName(e.cid):'',e.name,e.body].filter(Boolean).join(' · ')+(e.at?' · '+timeAgo(e.at):''),at:e.at||0,car:e.cid||'',
       go:e.t==='log'?'done':e.t==='item'?'log':e.t==='odo'?'home':'',url:locUrl(e),act:locUrl(e)?'افتح على الخريطة':'',unread:e.at>NF.seen&&e.by!==me&&read.indexOf('ev:'+e.id)<0}))
     .concat(NF.local.map(n=>Object.assign({},n,{body:(n.body||'')+(n.at?' · '+timeAgo(n.at):''),unread:read.indexOf(n.id)<0})))
     .sort((a,b)=>b.at-a.at);
@@ -592,7 +622,7 @@ function updateBell(){
 }
 function nfCard(x){
   return '<button type="button" class="nf '+(x.cls||'')+(x.unread?' unread':'')+'" data-nf="'+esc(x.id)+'"'
-    +(x.go?' data-go="'+esc(x.go)+'"':'')+(x.url?' data-url="'+esc(x.url)+'"':'')+'>'
+    +(x.go?' data-go="'+esc(x.go)+'"':'')+(x.car?' data-car="'+esc(x.car)+'"':'')+(x.url?' data-url="'+esc(x.url)+'"':'')+'>'
     +'<span class="ic">'+(x.ic&&x.ic.indexOf('<img')===0?x.ic:esc(x.ic||'🔔'))+'</span>'
     +'<span style="flex:1;min-width:0"><div class="t">'+esc(x.title)+'</div>'
     +(x.body?'<div class="b">'+esc(x.body)+'</div>':'')
@@ -613,7 +643,7 @@ function vNotifs(){
   $$('#view [data-nf]').forEach(c=>c.onclick=()=>{
     if(NF.read.indexOf(c.dataset.nf)<0){NF.read.push(c.dataset.nf);nfSave();}
     if(c.dataset.url){ allowAway(); location.href=c.dataset.url; return; }
-    if(c.dataset.go){ TAB=c.dataset.go; } render();
+    if(c.dataset.go){ if(c.dataset.car&&c.dataset.car!==CUR_CAR&&CARS[c.dataset.car]) openCar(c.dataset.car); TAB=c.dataset.go; } render();
   });
 }
 /* نسخة البرنامج: إشعار لما يتحدث، ولو فيه APK أحدث */
@@ -695,14 +725,22 @@ const icOf=it=>{
 let _lastTab=null;
 function render(){
   const keepY=window.scrollY||0, sameTab=(_lastTab===TAB);
-  $('#hTtl').textContent=CAR.nm||'SKODA A4';
-  $('#hSub').textContent=[CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||'صيانة العربية';
+  /* أكتر من عربية: صفحات الصيانة محتاجة عربية مفتوحة، وإلا بتروح لشاشة العربيات */
+  const DBISH=MODE==='db'||(MODE==='loading'&&MY_CARS.length>0);
+  const NOCAR=DBISH&&!CUR_CAR, MULTI=DBISH&&MY_CARS.length>1;
+  if(NOCAR&&['home','log','done'].indexOf(TAB)>=0) TAB='cars';
+  if(TAB==='cars'&&!MULTI&&!NOCAR) TAB='home';
+  $('#hTtl').textContent=NOCAR?'صيانة العربية':(CAR.nm||'العربية');
+  $('#hTtl').classList.toggle('sw',MULTI&&!NOCAR);
+  $('#hSub').textContent=NOCAR?(MULTI?'اختار العربية':'')
+    :([CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||(MULTI?'اضغط هنا لتغيير العربية':'صيانة العربية'));
   /* اسم الشخص الداخل بدل «المدير/محرر/مشاهد» — وفي وضع التجربة بيبان الدور */
   $('#hWho').textContent=PREVIEW?(ROLE_NM[ROLE]||'')+' (تجربة)':(MODE==='db'&&MY_DISPLAY?MY_DISPLAY:(ROLE_NM[ROLE]||''));
   /* الصفحة اللي اتقفلت عليك أيقونتها بتختفي من تحت لحظيًا، وترجع أول ما المدير يفتحهالك */
   const TABP={home:'maint',log:'log',done:'done'};
-  $$('nav.tabs button').forEach(b=>{ const pr=TABP[b.dataset.tab]; b.style.display=(pr&&!canSee(pr))?'none':''; });
-  if(TABP[TAB]&&!canSee(TABP[TAB])){
+  $$('nav.tabs button').forEach(b=>{ const t=b.dataset.tab, pr=TABP[t];
+    b.style.display=(t==='cars'?!(MULTI||NOCAR):(pr&&(NOCAR||!canSee(pr))))?'none':''; });
+  if(!NOCAR&&TABP[TAB]&&!canSee(TABP[TAB])){
     TAB=['home','log','done'].find(t=>canSee(TABP[t]))||'cfg';
     if(!$('#ov').classList.contains('hide')) close_();
   }
@@ -713,11 +751,30 @@ function render(){
   if(MODE==='local') bn='<div class="note">شغّال على الجهاز ده بس — البيانات مش بتتزامن. ادخل بحسابك من الإعدادات.</div>';
   $('#banner').innerHTML=bn;
   if(TAB==='notifs')vNotifs();
+  else if(TAB==='cars')vCars();
   else if(TAB==='users'&&ROLE==='admin')vUsers();
   else if(TAB==='home')vHome(); else if(TAB==='log')vLog(); else if(TAB==='done')vDone(); else {TAB='cfg';vCfg();}
   updateBell();
   if(sameTab&&_lastTab===TAB) window.scrollTo(0,keepY); else window.scrollTo(0,0);
   _lastTab=TAB;
+}
+
+/* ══════════════ شاشة العربيات ══════════════ */
+function carName(id){ return (CARS[id]&&CARS[id].nm)||''; }
+function carLine(c){ return [c.plate,c.year?'موديل '+c.year:''].filter(Boolean).join(' · '); }
+function vCars(){
+  const ids=MY_CARS.filter(id=>CARS[id]);
+  let h='<div class="sec"><h2>🚗 اختار العربية</h2><span class="cnt">'+ids.length+'</span></div>';
+  if(!ids.length) h+='<div class="empty"><span class="big">🚗</span>بحمّل العربيات…</div>';
+  ids.forEach(id=>{ const c=CARS[id];
+    h+='<button type="button" class="carcard'+(id===CUR_CAR?' on':'')+'" data-car="'+esc(id)+'">'
+     + '<span class="cic">🚗</span><span style="flex:1;min-width:0"><div class="nm">'+esc(c.nm||'عربية')+'</div>'
+     + '<div class="ln">'+esc(carLine(c)||'—')+'</div>'
+     + '<div class="ln">العداد: '+nf(Number(c.odo)||0)+' كم</div></span><span class="go">‹</span></button>';
+  });
+  if(REAL_ROLE==='admin') h+='<div class="tiny" style="text-align:center;margin-top:12px">تضيف عربية أو تعدّلها من «الإعدادات».</div>';
+  $('#view').innerHTML=h;
+  $$('#view [data-car]').forEach(b=>b.onclick=()=>openCar(b.dataset.car));
 }
 
 function vHome(){
@@ -878,8 +935,22 @@ function vCfg(){
   }
   h+='</div>';
 
+  /* العربيات — للمدير: إضافة وتعديل ومسح */
+  if(MODE==='db'&&REAL_ROLE==='admin'&&!PREVIEW){
+    h+='<div class="card"><h3>🚗 العربيات</h3>';
+    MY_CARS.forEach(id=>{ const c=CARS[id]||{};
+      h+='<div class="row" style="margin-bottom:7px"><div class="ic">🚗</div><div style="flex:1;min-width:0">'
+       + '<div class="nm">'+esc(c.nm||'عربية')+(id===CUR_CAR?' <span class="pill">مفتوحة</span>':'')+'</div>'
+       + '<div class="ln">'+esc(carLine(c)||'—')+'</div></div>'
+       + '<div class="end"><button class="btn sm ghost" data-ec="'+esc(id)+'">تعديل</button></div></div>'; });
+    h+='<button class="btn block" data-a="addcar">＋ إضافة عربية</button>'
+     + '<div class="tiny" style="margin-top:6px">كل عربية ليها صيانتها وسجلها لوحدها. مين يشوف أنهي عربية بتحدده من «المستخدمين».</div></div>';
+  }
+  const HASCAR=!(MODE==='db'&&!CUR_CAR);
+  if(!HASCAR&&MY_CARS.length>1) h+='<div class="tiny" style="margin:-4px 0 12px">بيانات العربية والبنود والنسخة الاحتياطية بتظهر هنا لما تفتح عربية.</div>';
+
   /* بيانات العربية — محكومة بصلاحية car */
-  if(canSee('car')){
+  if(HASCAR&&canSee('car')){
   h+='<div class="card"><h3>🚘 بيانات العربية</h3>'
    + '<label class="f"><span>الاسم</span><input '+(canEdit('car')?'':'readonly ')+'id="cNm" value="'+esc(CAR.nm)+'"></label>'
    + '<div class="grid2"><label class="f"><span>رقم اللوحة</span><input '+(canEdit('car')?'':'readonly ')+'id="cPl" value="'+esc(CAR.plate)+'"></label>'
@@ -892,7 +963,7 @@ function vCfg(){
   }
 
   /* البنود اتنقلت لصفحة السجل */
-  if(canSee('items')){
+  if(HASCAR&&canSee('items')){
     h+='<div class="card"><h3>🧰 بنود الصيانة والمواعيد</h3>'
      + '<div class="tiny" style="margin-bottom:10px">البنود ومواعيدها في صفحة «السجل» — تضيف وتمسح وتعدّل من هناك.</div>'
      + (ITEMS.length?'<button class="btn ghost block" data-a="goitems">افتح البنود في السجل</button>'
@@ -908,7 +979,7 @@ function vCfg(){
    + '<button class="btn ghost" data-a="shmore">مشاركة بطريقة تانية</button></div></div>';
 
   /* نسخة احتياطية */
-  if(canSee('backup')){
+  if(HASCAR&&canSee('backup')){
     h+='<div class="card"><h3>💾 نسخة احتياطية</h3>'
      + '<button class="btn ghost block" data-a="exp" style="margin-bottom:8px">📤 تصدير البيانات</button>'
      + '<button class="btn ghost block" data-a="imp"'+(canEdit('backup')?'':' disabled')+'>📥 استيراد بيانات</button></div>';
@@ -923,12 +994,14 @@ function vCfg(){
      + '<option value="editor">محرر</option><option value="viewer">مشاهد</option></select>'
      + '<div class="tiny">للتجربة بس — تشوف التطبيق بيبان إزاي لبابا أو أخوك.</div></div>';
   }
-  h+='<div class="tiny" style="text-align:center;margin:14px 0 4px">صيانة سكودا '+esc(APP_VER||'')
+  h+='<div class="tiny" style="text-align:center;margin:14px 0 4px">صيانة العربية '+esc(APP_VER||'')
    + (NATIVE?' · تطبيق الأندرويد':'')+'<br>البرنامج بيتحدث لوحده أول ما تفتحه وهو متصل بالنت.</div>';
 
   $('#view').innerHTML=h;
 
   const lk=$('#view [data-a="lock"]'); if(lk)lk.onclick=toggleLock;
+  $$('#view [data-ec]').forEach(b=>b.onclick=()=>shCar(b.dataset.ec));
+  const ac=$('#view [data-a="addcar"]'); if(ac)ac.onclick=()=>shCar(null);
   const us=$('#view [data-a="users"]'); if(us)us.onclick=()=>{TAB='users';render();};
   const sy=$('#view [data-a="sync"]'); if(sy)sy.onclick=()=>syncNow(sy);
   const out=$('#view [data-a="out"]'); if(out)out.onclick=()=>{if(confirm('تخرج من حسابك؟'))doLogout();};
@@ -956,15 +1029,17 @@ function vUsers(){
   if(MODE!=='db') h+='<div class="note">إدارة المستخدمين محتاجة اتصال بالسيرفر — سجّل دخولك الأول.</div>';
 
   /* اللي ليهم دخول */
+  const ALLU=allUsers(), MC=MY_CARS.length>1;
   h+='<div class="card"><h3>👥 اللي ليهم دخول</h3>';
-  if(!USERS.length) h+='<div class="tiny">لسه مفيش مستخدمين.</div>';
-  USERS.slice().sort((a,b)=>(b.owner?1:0)-(a.owner?1:0)).forEach(u=>{
+  if(!ALLU.length) h+='<div class="tiny">لسه مفيش مستخدمين.</div>';
+  ALLU.slice().sort((a,b)=>(b.owner?1:0)-(a.owner?1:0)).forEach(u=>{
     h+='<div class="row" style="margin-bottom:7px"><div class="ic">'+(u.google?'🟢':'👤')+'</div>'
      + '<div style="flex:1;min-width:0"><div class="nm">'+esc(u.name||u.un||u.email)+'</div>'
      + '<div class="ln" dir="auto">'+esc(u.un||u.email||'')+'<br><span class="pill">'+esc(ROLE_NM[u.role]||u.role)+'</span>'
      + (u.owner?' <span class="pill">صاحب البرنامج</span>':'')
      + (u.google?' <span class="pill">حساب جوجل</span>':'')
-     + (u.pending?' <span class="pill warn">لسه مادخلش</span>':'')+'</div></div>'
+     + (u.pending?' <span class="pill warn">لسه مادخلش</span>':'')
+     + (MC?'<br>'+u.cars.map(id=>'<span class="pill">🚗 '+esc(carName(id)||id)+'</span>').join(' '):'')+'</div></div>'
      + (u.owner?'':'<div class="end"><button class="btn sm ghost" data-a="eu" data-id="'+esc(u.id)+'">تعديل</button></div>')+'</div>';
   });
   h+='</div>';
@@ -982,6 +1057,7 @@ function vUsers(){
         +'<label class="f"><span>الباسورد</span><input id="auP" type="text" dir="ltr" placeholder="6 حروف أو أرقام على الأقل"></label></div>')
    + '<label class="f"><span>الصلاحية</span><select id="auR">'
    + ['editor','viewer','admin'].map(r=>'<option value="'+r+'">'+ROLE_NM[r]+'</option>').join('')+'</select></label>'
+   + carChecks(MY_CARS)
    + '<div id="auErr" class="note hidden"></div>'
    + '<button class="btn block" data-a="add"'+(MODE==='db'?'':' disabled')+'>إضافة</button></div>';
 
@@ -1009,8 +1085,9 @@ function vUsers(){
     const name=$('#auN').value.trim(), role=$('#auR').value;
     add.disabled=true;
     try{
-      if(ADD_MODE==='google') await addGoogleUser(name,$('#auE').value,role);
-      else await createUser(name,$('#auU').value,$('#auP').value,role);
+      const cars=readChecks('#view');
+      if(ADD_MODE==='google') await addGoogleUser(name,$('#auE').value,role,cars);
+      else await createUser(name,$('#auU').value,$('#auP').value,role,cars);
       toast('اتضاف ✓'); render();
     }catch(e){ err((e&&e.message)||'مقدرتش أضيفه'); add.disabled=false; }
   };
@@ -1022,13 +1099,13 @@ function vUsers(){
 }
 
 /* ══════════════ ابعت البرنامج لحد ══════════════ */
-const shareAppText=()=>'برنامج «صيانة سكودا» 🚗\n\nللأندرويد: نزّل التطبيق من هنا وثبّته (لو سألك اسمح بالتثبيت من المصدر ده):\n'
+const shareAppText=()=>'برنامج «صيانة العربية» 🚗\n\nللأندرويد: نزّل التطبيق من هنا وثبّته (لو سألك اسمح بالتثبيت من المصدر ده):\n'
   +APP_APK+'\n\nللآيفون أو الكمبيوتر: افتحه من هنا:\n'+APP_WEB+'\n\nبعد التثبيت ادخل باليوزر والباسورد اللي هبعتهملك.';
 function shareAppWa(){ allowAway(); location.href='https://wa.me/?text='+encodeURIComponent(shareAppText()); }
 async function shareAppMore(){
   allowAway(); const t=shareAppText();
-  try{ const S=NP('Share'); if(S){ await S.share({title:'صيانة سكودا',text:t,dialogTitle:'ابعت البرنامج'}); return; } }catch(x){ return; }
-  try{ if(navigator.share){ await navigator.share({title:'صيانة سكودا',text:t}); return; } }catch(x){ return; }
+  try{ const S=NP('Share'); if(S){ await S.share({title:'صيانة العربية',text:t,dialogTitle:'ابعت البرنامج'}); return; } }catch(x){ return; }
+  try{ if(navigator.share){ await navigator.share({title:'صيانة العربية',text:t}); return; } }catch(x){ return; }
   try{ await navigator.clipboard.writeText(t); toast('اتنسخ الكلام، الصقه في أي مكان'); }
   catch(x){ location.href='https://wa.me/?text='+encodeURIComponent(t); }
 }
@@ -1276,7 +1353,7 @@ function shNewItem(){
 
 /* ---- مستخدم ---- */
 function shUser(id){
-  const u=USERS.find(x=>x.id===id)||{id:null,name:'',un:'',role:'editor'};
+  const u=allUsers().find(x=>x.id===id)||{id:null,name:'',un:'',role:'editor',cars:MY_CARS.slice()};
   const isNew=!id;
   open_('<h3><span class="ic">👤</span>'+(isNew?'مستخدم جديد':'تعديل مستخدم')+'</h3>'
   +'<label class="f"><span>الاسم</span><input id="uN" value="'+esc(u.name||'')+'" placeholder="مثلاً: بابا"></label>'
@@ -1290,6 +1367,7 @@ function shUser(id){
   +'<label class="f"><span>الدور</span><select id="uR">'
   +['admin','editor','viewer'].map(r=>'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_NM[r]+'</option>').join('')
   +'</select><div class="tiny">المدير يشوف ويعدّل كل حاجة · المحرر والمشاهد بيتحكم فيهم جدول الصلاحيات.</div></label>'
+  +carChecks(u.cars||MY_CARS)
   +(u.owner?'<div class="note">ده صاحب البرنامج — مينفعش يتشال.</div>':'')
   +'<div id="uErr" class="note" style="display:none"></div>'
   +'<div class="acts">'+((!isNew&&!u.owner)?'<button class="btn danger" id="uD">حذف</button>':'')
@@ -1297,15 +1375,15 @@ function shUser(id){
   const err=t=>{const e=$('#uErr');e.style.display='block';e.textContent=t;};
   $('#uX').onclick=close_;
   $('#uS').onclick=async()=>{
-    const name=$('#uN').value.trim(), role=$('#uR').value;
+    const name=$('#uN').value.trim(), role=$('#uR').value, cars=readChecks('#sheet');
     $('#uS').disabled=true;
     try{
       if(isNew){
         if(MODE!=='db'){err('محتاج تكون داخل بحسابك عشان تضيف مستخدم');$('#uS').disabled=false;return;}
-        await createUser(name,$('#uU').value,$('#uP').value,role);
+        await createUser(name,$('#uU').value,$('#uP').value,role,cars);
         toast('اتعمل المستخدم');
       }else{
-        await updateUser(u.email,name||u.un,role);
+        await updateUser(u.email,name||u.un,role,cars);
         toast('اتحفظ');
       }
       close_();
@@ -1315,6 +1393,37 @@ function shUser(id){
     if(!confirm('تشيل «'+(u.name||u.un)+'» من البرنامج؟'))return;
     try{ await removeUser(u.email,u.un); toast('اتشال'); close_(); }
     catch(e){ err('مقدرتش أشيله'); }
+  };
+}
+
+/* ---- العربيات: إضافة وتعديل ومسح (للمدير) ---- */
+function shCar(id){
+  const c=id?(CARS[id]||{}):{}, isNew=!id;
+  open_('<h3><span class="ic">🚗</span>'+(isNew?'عربية جديدة':'تعديل العربية')+'</h3>'
+   +'<label class="f"><span>اسم العربية</span><input id="kN" value="'+esc(c.nm||'')+'" placeholder="مثلًا: هيونداي فيرنا"></label>'
+   +'<div class="grid2"><label class="f"><span>رقم اللوحة</span><input id="kP" value="'+esc(c.plate||'')+'"></label>'
+   +'<label class="f"><span>الموديل</span><input id="kY" inputmode="numeric" value="'+esc(c.year||'')+'"></label></div>'
+   +(isNew?'<label class="f"><span>العداد دلوقتي (كم)</span><input id="kO" inputmode="numeric" placeholder="0"></label>'
+      +'<div class="tiny" style="margin:-4px 0 10px">العربية هتبدأ بنفس بنود الصيانة، وتقدر تعدّلها من «السجل» وإنت فاتحها. '
+      +'والمديرين بيشوفوها على طول — والباقيين تختار من «المستخدمين».</div>':'')
+   +'<div id="kErr" class="note" style="display:none"></div>'
+   +'<div class="acts">'+(!isNew&&MY_CARS.length>1?'<button class="btn danger" id="kD">مسح</button>':'')
+   +'<button class="btn ghost" id="kX">إلغاء</button><button class="btn" id="kS">'+(isNew?'إضافة':'حفظ')+'</button></div>');
+  const err=t=>{const e=$('#kErr');e.style.display='block';e.textContent=t;};
+  $('#kX').onclick=close_;
+  $('#kS').onclick=async()=>{
+    const nm=$('#kN').value.trim(), plate=$('#kP').value.trim(), year=$('#kY').value.trim();
+    if(!nm){err('اكتب اسم العربية');return;}
+    $('#kS').disabled=true;
+    try{
+      if(isNew){ await addCar(nm,plate,year,parseInt($('#kO').value||'0',10)||0); close_(); toast('اتضافت ✓'); }
+      else { await carDoc(id).update({nm:nm,plate:plate,year:year}); logEvent('car','عدّل بيانات العربية: '+nm,'',carDoc(id)); close_(); toast('اتحفظ'); }
+    }catch(e){ console.warn(e); err('مقدرتش أحفظ — جرّب تاني'); $('#kS').disabled=false; }
+  };
+  const d=$('#kD'); if(d)d.onclick=async()=>{
+    if(!confirm('تمسح «'+(c.nm||'العربية')+'» من البرنامج؟ هتختفي عند الكل.'))return;
+    try{ await carDoc(id).update({archived:true,archivedAt:Date.now()}); close_(); toast('اتمسحت'); }
+    catch(e){ err('مقدرتش أمسحها'); }
   };
 }
 
@@ -1372,7 +1481,7 @@ async function lockSupported(){
 async function verifyUser(){
   verifying=true;
   try{
-    if(NATIVE){ await NP('NativeBiometric').verifyIdentity({reason:'افتح صيانة سكودا',title:'صيانة سكودا',
+    if(NATIVE){ await NP('NativeBiometric').verifyIdentity({reason:'افتح صيانة العربية',title:'صيانة العربية',
       subtitle:'بصمتك أو الـ PIN',useFallback:true,maxAttempts:5}); return true; }
     const a=await navigator.credentials.get({publicKey:{challenge:rnd(32),
       allowCredentials:[{type:'public-key',id:unb64(lockCred)}],userVerification:'required',timeout:60000}});
@@ -1425,7 +1534,9 @@ function goBack(){
   if(!$('#ov').classList.contains('hide')){ close_(); return true; }
   if(TAB==='users'){ TAB='cfg'; render(); return true; }
   if(TAB==='notifs'){ TAB=(PREV_TAB&&PREV_TAB!=='notifs')?PREV_TAB:'home'; render(); return true; }
-  if(TAB!=='home'){ TAB='home'; SHOW_ALL=false; render(); return true; }
+  if(TAB==='cars') return false;
+  if(TAB!=='home'){ TAB=(MODE==='db'&&!CUR_CAR)?'cars':'home'; SHOW_ALL=false; render(); return true; }
+  if(MODE==='db'&&MY_CARS.length>1){ TAB='cars'; SHOW_ALL=false; render(); return true; }
   return false;
 }
 if(NATIVE){ const A=NP('App'); if(A&&A.addListener){
@@ -1448,6 +1559,7 @@ if(!NATIVE){
 
 /* ══════════════ التشغيل ══════════════ */
 $$('nav.tabs button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;SHOW_ALL=false;render();});
+$('#hTtl').onclick=()=>{ if(MODE==='db'&&MY_CARS.length>1&&CUR_CAR&&TAB!=='cars'){ TAB='cars'; render(); } };
 $('#bellBtn').onclick=()=>{ if(TAB==='notifs'){ goBack(); return; } PREV_TAB=TAB; TAB='notifs'; render(); };
 
 /* بنود اتشالت نهائيًا من البرنامج */
@@ -1462,7 +1574,8 @@ function normalize(){
 }
 
 /* ══════════════ Firebase ══════════════ */
-const CAR_ID='skodaA4';
+const FIRST_CAR='skodaA4';        /* أول عربية (السكودا) — العربيات الجديدة بتاخد id تاني */
+let CARS={}, MY_CARS=[], CUR_CAR='', CAR_UNSUB=[], CAR_DOC_UNSUB={}, EVS={};
 const SYNTH='@masareef-elbeit.firebaseapp.com';   /* إيميلات مخلّقة لحسابات اليوزر/الباسورد */
 /* جوا أبليكشن الأندرويد النافذة المنبثقة مابترجعش — بنستخدم التحويل بدالها */
 const IS_APP=(function(){ try{
@@ -1553,7 +1666,9 @@ async function doUserLogin(){
 }
 function doLogout(){ try{localStorage.removeItem(DBC);}catch(e){} try{AUTH.signOut();}catch(e){} location.reload(); }
 
-function unsubAll(){ UNSUB.forEach(f=>{try{f();}catch(e){}}); UNSUB=[]; }
+function unsubAll(){ UNSUB.forEach(f=>{try{f();}catch(e){}}); UNSUB=[];
+  CAR_UNSUB.forEach(f=>{try{f();}catch(e){}}); CAR_UNSUB=[];
+  Object.keys(CAR_DOC_UNSUB).forEach(id=>CAR_DOC_UNSUB[id].forEach(f=>{try{f();}catch(e){}})); CAR_DOC_UNSUB={}; }
 
 function roleOf(c){
   if(!c)return 'viewer';
@@ -1569,97 +1684,212 @@ function usersFromCar(c){
   });
 }
 
-async function attachCar(){
-  carRef=FS.collection('cars').doc(CAR_ID);
-  let snap;
-  try{ snap=await carRef.get(); }
-  catch(e){
-    const code=(e&&(e.code||e.message))||'?';
-    const denied=String(code).indexOf('permission-denied')>=0;
-    showLogin((denied
-        ? '<div class="note">الحساب ده مالوش صلاحية على العربية دي.<br>انت داخل بـ:<br><b>'+esc(MYEMAIL||'—')+'</b><br>'
-          +'<span class="tiny">اخرج وادخل بالحساب اللي عامل بيه المدير، أو خلي المدير يضيفك من «الإعدادات ← المستخدمون».</span></div>'
-        : '<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.<br><span class="tiny">('+esc(code)+')</span></div>')
-      +'<button class="btn gold block" id="luOut" style="margin:10px 0">🚪 خروج وتغيير الحساب</button>'
-      +(denied?'':'<button class="btn ghost block" id="luRetry" style="margin-bottom:8px">🔄 جرّب تاني</button>')
-      +'<button class="btn ghost block" id="luOff">استخدام على الجهاز ده</button>');
-    const rt=$('#luRetry'); if(rt)rt.onclick=()=>{rt.disabled=true;attachCar();};
-    const ou=$('#luOut'); if(ou)ou.onclick=doLogout;
-    return; }
-
-  if(!snap.exists){
-    /* أول مرة: اللي فتح البرنامج يبقى صاحبه */
-    const base={owner:fbUser.uid, ownerEmail:MYEMAIL, nm:'SKODA A4', plate:'', year:'',
-      odo:0, odoDate:todayISO(), avg:1500,
-      roles:{[MYEMAIL]:'admin'}, names:{[MYEMAIL]:MYNAME||'المدير'}, unames:{}, uids:{[MYEMAIL]:fbUser.uid},
-      perms:clean(DEF_PERMS), createdAt:Date.now()};
+/* ══ العربيات: كل عربية ليها مستند لوحدها (cars/{id}) ══
+   وكل شخص ليه فهرس بالعربيات اللي يشوفها: carLogins/{uid}.cars
+   وحساب جوجل اللي لسه مادخلش: carUsernames/g_<email>.cars — من غير أي تعديل في قواعد السيرفر */
+function carDoc(id){ return FS.collection('cars').doc(id); }
+function gKey(em){ return 'g_'+String(em||'').toLowerCase(); }
+function adminCars(){ return MY_CARS.filter(id=>CARS[id]&&roleOf(CARS[id])==='admin'); }
+function adminCar(){ return (CUR_CAR&&CARS[CUR_CAR]&&roleOf(CARS[CUR_CAR])==='admin')?CUR_CAR:(adminCars()[0]||''); }
+async function myCarIds(){
+  let ids=[];
+  try{ const s=await FS.collection('carLogins').doc(fbUser.uid).get();
+    if(s.exists){ const d=s.data()||{}; ids=(d.cars&&d.cars.length)?d.cars.slice():(d.car?[d.car]:[]); } }catch(e){}
+  if(MYEMAIL&&MYEMAIL.indexOf(SYNTH)<0){ try{ const s=await FS.collection('carUsernames').doc(gKey(MYEMAIL)).get();
+    if(s.exists) (s.data().cars||[]).forEach(id=>{ if(ids.indexOf(id)<0) ids.push(id); }); }catch(e){} }
+  /* مفيش فهرس خالص (حسابات قديمة أو أول مرة): نجرّب العربية الأولى */
+  if(!ids.length) ids=[FIRST_CAR];
+  return ids;
+}
+/* العربيات اللي ليك فعلًا — وحساب جوجل الجديد بيربط نفسه بيها */
+async function resolveCars(){
+  const ids=await myCarIds(), ok=[]; let firstMissing=false, lastErr=null;
+  for(const id of ids){
     try{
-      await carRef.set(base);
-      const b=FS.batch();
-      DEFAULT_ITEMS.forEach(d=>b.set(carRef.collection('items').doc(d.id),
-        clean(Object.assign({lastKm:null,lastDate:''},d))));
-      await b.commit();
-    }catch(e){
-      showLogin('<div class="note">مقدرتش أعمل بيانات العربية. اتأكد من قواعد الأمان.</div>');
-      return;
-    }
-    snap=await carRef.get();
+      const snap=await carDoc(id).get();
+      if(!snap.exists){ if(id===FIRST_CAR) firstMissing=true; continue; }
+      let c=snap.data();
+      if(!c||c.archived||!roleOf(c)) continue;
+      if(c.owner!==fbUser.uid && !((c.uids||{})[MYEMAIL])){
+        try{ await carDoc(id).update(FP('uids',MYEMAIL),fbUser.uid);
+             c=Object.assign({},c,{uids:Object.assign({},c.uids||{},{[MYEMAIL]:fbUser.uid})}); }
+        catch(e){ console.warn('claim',e); }
+      }
+      CARS[id]=c; ok.push(id);
+    }catch(e){ lastErr=e; }
   }
+  return {ok:ok,firstMissing:firstMissing,lastErr:lastErr};
+}
+function showNoAccess(e){
+  const code=(e&&(e.code||e.message))||'?';
+  const denied=String(code).indexOf('permission-denied')>=0;
+  showLogin((denied
+      ? '<div class="note">الحساب ده مالوش صلاحية على أي عربية.<br>انت داخل بـ:<br><b>'+esc(MYEMAIL||'—')+'</b><br>'
+        +'<span class="tiny">اخرج وادخل بالحساب اللي عامل بيه المدير، أو خلي المدير يضيفك من «الإعدادات ← المستخدمون».</span></div>'
+      : '<div class="note">مقدرتش أوصل للبيانات — جرّب تاني بعد ثانية.<br><span class="tiny">('+esc(code)+')</span></div>')
+    +'<button class="btn gold block" id="luOut" style="margin:10px 0">🚪 خروج وتغيير الحساب</button>'
+    +(denied?'':'<button class="btn ghost block" id="luRetry" style="margin-bottom:8px">🔄 جرّب تاني</button>')
+    +'<button class="btn ghost block" id="luOff">استخدام على الجهاز ده</button>');
+  const rt=$('#luRetry'); if(rt)rt.onclick=()=>{rt.disabled=true;attachCar();};
+  const ou=$('#luOut'); if(ou)ou.onclick=doLogout;
+}
+/* أول مرة خالص: اللي فتح البرنامج يبقى صاحبه */
+async function createFirstCar(){
+  const ref=carDoc(FIRST_CAR);
+  const base={owner:fbUser.uid, ownerEmail:MYEMAIL, nm:'SKODA A4', plate:'', year:'',
+    odo:0, odoDate:todayISO(), avg:1500,
+    roles:{[MYEMAIL]:'admin'}, names:{[MYEMAIL]:MYNAME||'المدير'}, unames:{}, uids:{[MYEMAIL]:fbUser.uid},
+    emails:[MYEMAIL], perms:clean(DEF_PERMS), createdAt:Date.now()};
+  try{
+    await ref.set(base);
+    const b=FS.batch();
+    DEFAULT_ITEMS.forEach(d=>b.set(ref.collection('items').doc(d.id),clean(Object.assign({lastKm:null,lastDate:''},d))));
+    await b.commit();
+  }catch(e){
+    showLogin('<div class="note">مقدرتش أعمل بيانات العربية. اتأكد من قواعد الأمان.</div>');
+    return false;
+  }
+  CARS[FIRST_CAR]=base; return true;
+}
 
-  const c=snap.data();
-  const r=roleOf(c);
-  if(!r){
-    showLogin('<div class="note">الحساب ده (<b>'+esc(MYEMAIL)+'</b>) مضافش للعربية دي.<br>قول للمدير يضيفك من الإعدادات.</div>'
-      +'<button class="btn ghost block" id="luOut" style="margin-top:12px">خروج</button>');
-    const o=$('#luOut'); if(o)o.onclick=doLogout;
-    return;
-  }
-  /* حساب جوجل المدير ضافه ولسه أول مرة يدخل: يربط نفسه */
-  if(fbUser && c.owner!==fbUser.uid && !((c.uids||{})[MYEMAIL])){
-    try{ await carRef.update(FP('uids',MYEMAIL),fbUser.uid); }catch(e){ console.warn('claim',e); }
-  }
-  setRealRole(r); MODE='db'; CAN_WRITE=true; hideLogin();
+async function attachCar(){
+  let r;
+  try{ r=await resolveCars(); }catch(e){ showNoAccess(e); return; }
+  if(!r.ok.length&&r.firstMissing){ if(!(await createFirstCar())) return; r.ok=[FIRST_CAR]; }
+  if(!r.ok.length){ showNoAccess(r.lastErr||{code:'permission-denied'}); return; }
+  MY_CARS=r.ok;
+  const c0=CARS[MY_CARS[0]];
+  setRealRole(roleOf(c0)); if(c0.perms)mergePerms(c0.perms);
+  MY_DISPLAY=((c0.names||{})[MYEMAIL])||MYNAME||MYEMAIL.split('@')[0];
+  MY_LOGIN=((c0.unames||{})[MYEMAIL])||MYEMAIL;
+  MODE='db'; CAN_WRITE=true; hideLogin();
 
   /* خروج إجباري لكل الأجهزة */
   let lastForce=0; try{lastForce=+(localStorage.getItem(LS+'.force')||0);}catch(e){}
-  if(c.forceExit && c.forceExit>lastForce && c.forceExit>Date.now()-86400000*3){
-    try{localStorage.setItem(LS+'.force',String(c.forceExit));}catch(e){}
+  const fx=Math.max.apply(null,[0].concat(MY_CARS.map(id=>Number(CARS[id].forceExit)||0)));
+  if(fx>lastForce && fx>Date.now()-86400000*3){
+    try{localStorage.setItem(LS+'.force',String(fx));}catch(e){}
     doLogout(); return;
   }
 
-  unsubAll();
-  UNSUB.push(carRef.onSnapshot(s=>{
-    if(!s.exists)return;
-    const d=s.data();
-    CAR=Object.assign({},DEFAULT_CAR,{nm:d.nm,plate:d.plate,year:d.year,odo:d.odo,
-      odoDate:d.odoDate,avg:d.avg});
-    try{CAR.bio=localStorage.getItem(LS+'.bio')==='1';}catch(e){}
-    if(d.perms)mergePerms(d.perms);
-    USERS=usersFromCar(d);
-    MY_DISPLAY=((d.names||{})[MYEMAIL])||MYNAME||MYEMAIL.split('@')[0];
-    MY_LOGIN=((d.unames||{})[MYEMAIL])||MYEMAIL;
-    healCarMaps(d);
-    if(!CAR_OWNER){ CAR_OWNER=d.owner||''; setTimeout(sendLocation,1500); }
-    /* التحديث من السيرفر مابيلغيش وضع التجربة؛ ولو المدير شالك تخرج */
-    const nr=roleOf(d); if(!nr){doLogout();return;} setRealRole(nr);
-    LOADED.car=1; render(); dbcSave();
-  },e=>{console.warn(e); if(e&&e.code==='permission-denied')doLogout();}));
+  unsubAll(); EVS={};
+  MY_CARS.forEach(watchCar);
+  watchIndex();
+  if(REAL_ROLE==='admin') syncMyIndex();
 
-  UNSUB.push(carRef.collection('items').onSnapshot(s=>{
-    ITEMS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    normalize(); LOADED.items=1; render(); dbcSave();
-  },e=>console.warn(e)));
+  /* عربية واحدة: تفتح على طول. أكتر: شاشة العربيات — إلا بعد تحديث البرنامج وإنت جوه عربية */
+  let keep=''; try{ keep=sessionStorage.getItem('sk.car')||''; sessionStorage.removeItem('sk.car'); }catch(e){}
+  if(MY_CARS.length===1) openCar(MY_CARS[0],true);
+  else if(keep&&MY_CARS.indexOf(keep)>=0){ TAB=BOOT_TAB; openCar(keep,true); }
+  else { closeCar(); if(['cfg','users'].indexOf(TAB)<0) TAB='cars'; render(); }
+  setTimeout(sendLocation,1500);
+  dbcSave();
+}
 
-  UNSUB.push(carRef.collection('logs').onSnapshot(s=>{
-    LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    LOADED.logs=1; render(); dbcSave();
-  },e=>console.warn(e)));
+/* مستند كل عربية + سجل تعديلاتها (الجرس) بيفضلوا متابعين لحظيًا */
+function watchCar(id){
+  if(CAR_DOC_UNSUB[id]) return;
+  const ref=carDoc(id);
+  const u1=ref.onSnapshot(s=>{
+    const d=s.exists?s.data():null;
+    if(!d||d.archived||!roleOf(d)){ dropCar(id); return; }
+    CARS[id]=d;
+    if(MY_CARS.indexOf(id)<0) MY_CARS.push(id);
+    healCarMaps(d,ref);
+    if(id===CUR_CAR) applyCarDoc(d);
+    else if(!CUR_CAR&&id===MY_CARS[0]){ const nr=roleOf(d); if(nr)setRealRole(nr); if(d.perms)mergePerms(d.perms); }
+    render(); dbcSave();
+  },e=>{ console.warn(e); if(e&&e.code==='permission-denied') dropCar(id); });
+  const u2=ref.collection('events').orderBy('at','desc').limit(60).onSnapshot(s=>{
+    EVS[id]=s.docs.map(d=>Object.assign({id:d.id,cid:id},d.data())); mergeEvents();
+  },e=>console.warn('events',e));
+  CAR_DOC_UNSUB[id]=[u1,u2];
+}
+function mergeEvents(){
+  EVENTS=[].concat.apply([],Object.keys(EVS).filter(id=>MY_CARS.indexOf(id)>=0).map(id=>EVS[id]))
+    .sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,120);
+  if(TAB==='notifs') render(); else updateBell();
+}
+/* العربية اتمسحت أو المدير شالك منها */
+function dropCar(id){
+  (CAR_DOC_UNSUB[id]||[]).forEach(f=>{try{f();}catch(e){}}); delete CAR_DOC_UNSUB[id];
+  delete CARS[id]; delete EVS[id];
+  const had=MY_CARS.indexOf(id)>=0;
+  MY_CARS=MY_CARS.filter(x=>x!==id);
+  if(!had) return;
+  if(!MY_CARS.length){ doLogout(); return; }
+  if(id===CUR_CAR){
+    closeCar();
+    if(!$('#ov').classList.contains('hide')) close_();
+    if(MY_CARS.length===1){ openCar(MY_CARS[0]); return; }
+    TAB='cars';
+  } else if(!CUR_CAR&&MY_CARS.length===1){ openCar(MY_CARS[0],true); return; }
+  mergeEvents(); render(); dbcSave();
+}
+/* المدير ضافك لعربية جديدة وإنت فاتح البرنامج: تظهر لوحدها */
+let _idxT=null;
+function watchIndex(){
+  const later=()=>{ clearTimeout(_idxT); _idxT=setTimeout(refreshCars,700); };
+  let f1=true, f2=true;
+  UNSUB.push(FS.collection('carLogins').doc(fbUser.uid).onSnapshot(()=>{ if(f1){f1=false;return;} later(); },()=>{}));
+  if(MYEMAIL.indexOf(SYNTH)<0)
+    UNSUB.push(FS.collection('carUsernames').doc(gKey(MYEMAIL)).onSnapshot(()=>{ if(f2){f2=false;return;} later(); },()=>{}));
+}
+let _refAt=0;
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&MODE==='db'&&Date.now()-_refAt>30000) refreshCars(); });
+async function refreshCars(){
+  if(MODE!=='db'||!fbUser) return;
+  _refAt=Date.now();
+  let r; try{ r=await resolveCars(); }catch(e){ return; }
+  const before=MY_CARS.length;
+  r.ok.forEach(id=>{ if(MY_CARS.indexOf(id)<0){ MY_CARS.push(id); watchCar(id); } });
+  if(before===1&&MY_CARS.length>1&&CUR_CAR) toast('اتضافتلك عربية جديدة 🚗');
+  render(); dbcSave();
+}
+/* فهرسك إنت (للمدير): أي عربية عندك تتسجل فيه */
+async function syncMyIndex(){
+  const car=adminCar(); if(!car||!fbUser) return;
+  const ref=FS.collection('carLogins').doc(fbUser.uid);
+  let cur=[]; try{ const s=await ref.get(); if(s.exists){ const d=s.data()||{}; cur=(d.cars||[]).slice(); if(!cur.length&&d.car) cur=[d.car]; } }catch(e){}
+  const all=cur.slice(); MY_CARS.forEach(id=>{ if(all.indexOf(id)<0) all.push(id); });
+  if(all.length===cur.length&&cur.length) return;
+  try{ await ref.set({car:car,cars:all,email:MYEMAIL}); }catch(e){ console.warn('index',e); }
+}
 
-  /* سجل التعديلات للجرس */
-  UNSUB.push(carRef.collection('events').orderBy('at','desc').limit(60).onSnapshot(s=>{
-    EVENTS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    if(TAB==='notifs') render(); else updateBell();
-  },e=>console.warn('events',e)));
+function applyCarDoc(d){
+  CAR=Object.assign({},DEFAULT_CAR,{nm:d.nm,plate:d.plate,year:d.year,odo:d.odo,odoDate:d.odoDate,avg:d.avg});
+  try{CAR.bio=localStorage.getItem(LS+'.bio')==='1';}catch(e){}
+  if(d.perms)mergePerms(d.perms);
+  USERS=usersFromCar(d);
+  MY_DISPLAY=((d.names||{})[MYEMAIL])||MYNAME||MYEMAIL.split('@')[0];
+  MY_LOGIN=((d.unames||{})[MYEMAIL])||MYEMAIL;
+  /* التحديث من السيرفر مابيلغيش وضع التجربة */
+  const nr=roleOf(d); if(nr) setRealRole(nr);
+  LOADED.car=1;
+}
+function closeCar(){
+  CAR_UNSUB.forEach(f=>{try{f();}catch(e){}}); CAR_UNSUB=[];
+  CUR_CAR=''; carRef=null; LOADED={car:0,items:0,logs:0};
+}
+/* فتح عربية: بنودها وسجلها بس اللي بيتحمّلوا */
+function openCar(id,keepTab){
+  if(!CARS[id]) return;
+  if(!(id===CUR_CAR&&CAR_UNSUB.length)){
+    closeCar(); CUR_CAR=id; carRef=carDoc(id);
+    if(DBC_CUR!==id){ ITEMS=[]; LOGS=[]; }
+    DBC_CUR='';
+    applyCarDoc(CARS[id]);
+    CAR_UNSUB.push(carRef.collection('items').onSnapshot(s=>{
+      ITEMS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
+      normalize(); LOADED.items=1; render(); dbcSave();
+    },e=>console.warn(e)));
+    CAR_UNSUB.push(carRef.collection('logs').onSnapshot(s=>{
+      LOGS=s.docs.map(d=>Object.assign({id:d.id},d.data()));
+      LOADED.logs=1; render(); dbcSave();
+    },e=>console.warn(e)));
+  }
+  if(!keepTab||TAB==='cars') TAB='home';
+  SHOW_ALL=false; render(); dbcSave();
 }
 
 /* ── إدارة المستخدمين (المدير) ──
@@ -1675,8 +1905,9 @@ function flatPairs(obj,prefix,out){
   return out;
 }
 /* بيصلّح المستخدمين اللي اتكتبوا غلط قبل كده */
-async function healCarMaps(d){
-  if(!carRef||!fbUser||!d||d.owner!==fbUser.uid) return;
+async function healCarMaps(d,ref){
+  ref=ref||carRef;
+  if(!ref||!fbUser||!d||d.owner!==fbUser.uid) return;
   const DEL=firebase.firestore.FieldValue.delete(), ops=[];
   ['roles','names','unames','uids'].forEach(k=>{
     const m=d[k]||{};
@@ -1689,12 +1920,70 @@ async function healCarMaps(d){
       ops.push(FP(k,top),DEL);
     });
   });
-  if(ops.length) try{ await carRef.update.apply(carRef,ops); }catch(e){}
+  if(ops.length) try{ await ref.update.apply(ref,ops); }catch(e){}
 }
-async function createUser(name,username,pw,role){
+/* كل الناس من كل العربيات، وكل واحد معاه العربيات اللي يشوفها */
+function allUsers(){
+  const map={}, ownerCar=CARS[FIRST_CAR]?FIRST_CAR:MY_CARS[0];
+  MY_CARS.forEach(id=>{ const c=CARS[id]; if(!c) return;
+    const roles=c.roles||{}, names=c.names||{}, unames=c.unames||{}, uids=c.uids||{};
+    Object.keys(roles).forEach(em=>{
+      const u=map[em]||(map[em]={id:em,email:em,name:'',un:'',role:roles[em],google:em.indexOf(SYNTH)<0,uid:'',owner:false,cars:[]});
+      u.name=u.name||names[em]||''; u.un=u.un||unames[em]||''; u.uid=u.uid||uids[em]||'';
+      if(id===ownerCar&&c.owner&&uids[em]===c.owner) u.owner=true;
+      if(u.cars.indexOf(id)<0) u.cars.push(id);
+    });
+  });
+  return Object.keys(map).map(em=>{ const u=map[em]; u.name=u.name||u.un||em; u.pending=u.google&&!u.uid; return u; });
+}
+/* اختيار العربيات في فورم المستخدم — بيظهر لما يكون فيه أكتر من عربية */
+function carChecks(sel){
+  if(MY_CARS.length<2) return '';
+  sel=sel||[];
+  return '<div class="f" style="margin-bottom:11px"><span style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:600">العربيات اللي يشوفها</span><div class="cchk">'
+    +MY_CARS.map(id=>'<label class="cchk1"><input type="checkbox" data-cc="'+esc(id)+'"'+(sel.indexOf(id)>=0?' checked':'')+'>'
+      +esc(carName(id)||id)+'</label>').join('')
+    +'</div><div class="tiny" style="margin-top:5px">المدير بيشوف كل العربيات.</div></div>';
+}
+function readChecks(root){
+  if(MY_CARS.length<2) return MY_CARS.slice();
+  return $$(root+' [data-cc]').filter(x=>x.checked).map(x=>x.dataset.cc);
+}
+/* بيكتب الشخص في العربيات اللي اخترتها، ويشيله من الباقي، ويحدّث الفهرس بتاعه */
+async function writeMembership(u,role,name,cars){
+  const AV=firebase.firestore.FieldValue, DEL=AV.delete();
+  for(const id of adminCars()){
+    const c=CARS[id], has=!!((c.roles||{})[u.email]), want=cars.indexOf(id)>=0, ref=carDoc(id);
+    if(want){
+      const ops=[FP('roles',u.email),role, FP('names',u.email),name||u.un||u.email.split('@')[0]];
+      if(u.un) ops.push(FP('unames',u.email),u.un);
+      if(u.uid) ops.push(FP('uids',u.email),u.uid);
+      ops.push('emails',AV.arrayUnion(u.email));
+      await ref.update.apply(ref,ops);
+    } else if(has && !(c.owner&&u.uid&&u.uid===c.owner)){
+      await ref.update(FP('roles',u.email),DEL, FP('names',u.email),DEL, FP('unames',u.email),DEL,
+        FP('uids',u.email),DEL, 'emails',AV.arrayRemove(u.email));
+    }
+  }
+  await writeIndex(u,cars);
+}
+async function writeIndex(u,cars){
+  const car=adminCar(); if(!car) return;
+  if(u.uid){ try{ await FS.collection('carLogins').doc(u.uid).set({car:car,cars:cars,email:u.email}); }catch(e){ console.warn('index',e); } }
+  /* حساب جوجل لسه مادخلش (مالوش uid): فهرسه بالإيميل */
+  if(u.google){
+    const ref=FS.collection('carUsernames').doc(gKey(u.email));
+    let has=false; try{ has=(await ref.get()).exists; }catch(e){}
+    if(has){ try{ await ref.delete(); }catch(e){} }
+    if(!u.uid&&cars.length){ try{ await ref.set({email:u.email,car:car,cars:cars}); }catch(e){ console.warn('gindex',e); } }
+  }
+}
+async function createUser(name,username,pw,role,cars){
   username=(username||'').trim().toLowerCase();
   if(!/^[a-z0-9._-]{3,}$/.test(username)) throw new Error('اسم المستخدم لازم يكون حروف إنجليزي وأرقام، 3 على الأقل');
   if(pw.length<6) throw new Error('كلمة السر لازم 6 حروف على الأقل');
+  cars=(role==='admin'||!cars)?MY_CARS.slice():cars;
+  if(!cars.length) throw new Error('اختار عربية واحدة على الأقل');
   const taken=await FS.collection('carUsernames').doc(username).get();
   if(taken.exists) throw new Error('اسم المستخدم ده مستعمل');
   if(!SEC) SEC=firebase.initializeApp(window.FB_CONFIG,'sec');
@@ -1702,39 +1991,74 @@ async function createUser(name,username,pw,role){
   const cred=await SEC.auth().createUserWithEmailAndPassword(email,pw);
   const uid=cred.user.uid;
   try{ await SEC.auth().signOut(); }catch(e){}
-  await FS.collection('carUsernames').doc(username).set({email:email,car:CAR_ID});
-  await FS.collection('carLogins').doc(uid).set({car:CAR_ID,email:email});
-  await carRef.update(FP('roles',email),role, FP('names',email),name||username,
-    FP('unames',email),username, FP('uids',email),uid,
-    'emails',firebase.firestore.FieldValue.arrayUnion(email));
+  await FS.collection('carUsernames').doc(username).set({email:email,car:adminCar()});
+  await writeMembership({email:email,un:username,uid:uid,google:false},role,name||username,cars);
   logEvent('user','ضاف '+(name||username)+' — '+(ROLE_NM[role]||role));
 }
 /* إضافة حساب جوجل: بيتسجل بالإيميل، والـ uid بيتربط أول ما الشخص يدخل */
-async function addGoogleUser(name,email,role){
+async function addGoogleUser(name,email,role,cars){
   email=String(email||'').trim().toLowerCase();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('اكتب إيميل جوجل صح');
   if(email.indexOf(SYNTH)>=0) throw new Error('ده مش إيميل جوجل');
-  if(USERS.some(u=>u.email===email)) throw new Error('الحساب ده مضاف قبل كده');
-  await carRef.update(FP('roles',email),role, FP('names',email),name||email.split('@')[0],
-    'emails',firebase.firestore.FieldValue.arrayUnion(email));
+  if(allUsers().some(u=>u.email===email)) throw new Error('الحساب ده مضاف قبل كده');
+  cars=(role==='admin'||!cars)?MY_CARS.slice():cars;
+  if(!cars.length) throw new Error('اختار عربية واحدة على الأقل');
+  await writeMembership({email:email,un:'',uid:'',google:true},role,name||email.split('@')[0],cars);
   logEvent('user','ضاف '+(name||email)+' — '+(ROLE_NM[role]||role));
 }
-async function updateUser(email,name,role){
-  const old=USERS.find(u=>u.email===email);
-  await carRef.update(FP('roles',email),role, FP('names',email),name);
-  if(old&&old.role!==role) logEvent('user','غيّر صلاحية '+name+' لـ '+(ROLE_NM[role]||role));
+async function updateUser(email,name,role,cars){
+  const old=allUsers().find(u=>u.email===email);
+  if(!old) throw new Error('المستخدم ده مش موجود');
+  cars=(role==='admin'||!cars)?MY_CARS.slice():cars;
+  if(!cars.length) throw new Error('اختار عربية واحدة على الأقل — أو امسحه');
+  await writeMembership(old,role,name,cars);
+  if(old.role!==role) logEvent('user','غيّر صلاحية '+name+' لـ '+(ROLE_NM[role]||role));
+  else if(old.cars.slice().sort().join()!==cars.slice().sort().join()) logEvent('user','غيّر عربيات '+name);
 }
 async function removeUser(email,username){
-  const old=USERS.find(u=>u.email===email);
-  const DEL=firebase.firestore.FieldValue.delete();
-  await carRef.update(FP('roles',email),DEL, FP('names',email),DEL,
-    FP('unames',email),DEL, FP('uids',email),DEL,
-    'emails',firebase.firestore.FieldValue.arrayRemove(email));
+  const old=allUsers().find(u=>u.email===email);
+  const AV=firebase.firestore.FieldValue, DEL=AV.delete();
+  for(const id of adminCars()){
+    const c=CARS[id]; if(!((c.roles||{})[email])) continue;
+    if(old&&old.uid&&c.owner===old.uid) continue;
+    await carDoc(id).update(FP('roles',email),DEL, FP('names',email),DEL,
+      FP('unames',email),DEL, FP('uids',email),DEL, 'emails',AV.arrayRemove(email));
+  }
   if(username) await FS.collection('carUsernames').doc(username).delete().catch(()=>{});
+  if(old&&old.google) await FS.collection('carUsernames').doc(gKey(email)).delete().catch(()=>{});
+  if(old&&old.uid) await FS.collection('carLogins').doc(old.uid).delete().catch(()=>{});
   logEvent('user','شال '+((old&&old.name)||username||email)+' من البرنامج');
 }
+/* إضافة عربية: المديرين كلهم بيشوفوها على طول */
+async function addCar(nm,plate,year,odo){
+  const id='car'+Date.now().toString(36), ref=carDoc(id);
+  const admins=allUsers().filter(u=>u.role==='admin'&&u.email!==MYEMAIL);
+  const base={owner:fbUser.uid, ownerEmail:MYEMAIL, nm:nm, plate:plate, year:year,
+    odo:Number(odo)||0, odoDate:todayISO(), avg:1500,
+    roles:{[MYEMAIL]:'admin'}, names:{[MYEMAIL]:MY_DISPLAY||MYNAME||'المدير'},
+    unames:(MY_LOGIN&&MY_LOGIN!==MYEMAIL)?{[MYEMAIL]:MY_LOGIN}:{}, uids:{[MYEMAIL]:fbUser.uid},
+    emails:[MYEMAIL], perms:clean(PERMS), createdAt:Date.now()};
+  await ref.set(base);
+  const b=FS.batch();
+  DEFAULT_ITEMS.forEach(d=>b.set(ref.collection('items').doc(d.id),clean(Object.assign({lastKm:null,lastDate:''},d))));
+  await b.commit();
+  CARS[id]=base; if(MY_CARS.indexOf(id)<0) MY_CARS.push(id); watchCar(id);
+  const AV=firebase.firestore.FieldValue;
+  for(const u of admins){
+    const ops=[FP('roles',u.email),'admin', FP('names',u.email),u.name];
+    if(u.un) ops.push(FP('unames',u.email),u.un);
+    if(u.uid) ops.push(FP('uids',u.email),u.uid);
+    ops.push('emails',AV.arrayUnion(u.email));
+    try{ await ref.update.apply(ref,ops); await writeIndex(u,u.cars.concat([id])); }catch(e){ console.warn('admin',u.email,e); }
+  }
+  await syncMyIndex();
+  logEvent('car','ضاف عربية: '+nm,'',ref);
+  render(); dbcSave();
+  return id;
+}
 async function forceExitAll(){
-  await carRef.update({forceExit:Date.now()});
+  const t=Date.now();
+  for(const id of adminCars()){ try{ await carDoc(id).update({forceExit:t}); }catch(e){ writeErr(e); } }
   toast('كل الأجهزة هتتقفل وتفتح على آخر نسخة');
 }
 

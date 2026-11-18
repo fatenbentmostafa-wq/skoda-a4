@@ -295,8 +295,17 @@ html.locked body>.wrap, html.locked nav.tabs{visibility:hidden}
 .cchk{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
 .cchk1{display:flex;align-items:center;gap:7px;background:#0b1a16;border:1px solid var(--line);border-radius:12px;padding:8px 11px;font-size:13.5px;cursor:pointer}
 .cchk1 input{width:18px;height:18px;margin:0;accent-color:var(--em2)}
-#hTtl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#hTtl.sw{cursor:pointer}
+/* اسم العربية فوق بيظهر كامل */
+#hTtl{white-space:normal;overflow-wrap:anywhere}
+#hTtl.long{font-size:15.5px}
+/* لوجو ماركة العربية المفتوحة مكان صورة البرنامج */
+.brand.lg{background:#0b1a16}
+.brand.lg img{width:82%;height:82%;object-fit:contain;margin:auto}
+.carcard.c2{flex-direction:column;justify-content:center;text-align:center;gap:6px;padding:20px 14px 18px}
+.carlogo{width:96px;height:96px;object-fit:contain;display:block;margin:0 auto 4px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.carlogo.emo{font-size:58px;line-height:96px;text-align:center;filter:none}
+.carcard.c2 .nm{font-size:18px}
+#hTtl.carsw{cursor:pointer}
 </style>
 </head>
 <body>
@@ -731,7 +740,12 @@ function render(){
   if(NOCAR&&['home','log','done'].indexOf(TAB)>=0) TAB='cars';
   if(TAB==='cars'&&!MULTI&&!NOCAR) TAB='home';
   $('#hTtl').textContent=NOCAR?'صيانة العربية':(CAR.nm||'العربية');
-  $('#hTtl').classList.toggle('sw',MULTI&&!NOCAR);
+  $('#hTtl').classList.toggle('carsw',MULTI&&!NOCAR);
+  $('#hTtl').classList.toggle('long',($('#hTtl').textContent||'').length>14);
+  { const k=NOCAR?'':logoKey(CUR_CAR&&CARS[CUR_CAR]?CARS[CUR_CAR]:CAR), br=$('header.top .brand'), bi=br&&br.querySelector('img');
+    const src=k?LOGOS[k].src:'app.png';
+    if(bi&&bi.getAttribute('src')!==src) bi.setAttribute('src',src);
+    if(br) br.classList.toggle('lg',!!k); }
   $('#hSub').textContent=NOCAR?(MULTI?'اختار العربية':'')
     :([CAR.plate,CAR.year?'موديل '+CAR.year:''].filter(Boolean).join(' · ')||(MULTI?'اضغط هنا لتغيير العربية':'صيانة العربية'));
   /* اسم الشخص الداخل بدل «المدير/محرر/مشاهد» — وفي وضع التجربة بيبان الدور */
@@ -762,15 +776,29 @@ function render(){
 /* ══════════════ شاشة العربيات ══════════════ */
 function carName(id){ return (CARS[id]&&CARS[id].nm)||''; }
 function carLine(c){ return [c.plate,c.year?'موديل '+c.year:''].filter(Boolean).join(' · '); }
+/* لوجو الماركة: اللي اتختار من «تعديل العربية»، أو من اسم العربية لوحده */
+const LOGOS={skoda:{nm:'سكودا',src:'logo-skoda.webp'}, hyundai:{nm:'هيونداي',src:'logo-hyundai.webp'}};
+function logoKey(c){
+  if(!c) return '';
+  if(c.logo==='none') return '';
+  if(c.logo&&LOGOS[c.logo]) return c.logo;
+  const n=String(c.nm||'');
+  if(/skoda|octavia|سكودا|اسكودا|إسكودا|أوكتافيا|اوكتافيا/i.test(n)) return 'skoda';
+  if(/hyundai|verna|elantra|accent|هيونداي|هيونداى|فيرنا|النترا|إلنترا|اكسنت|أكسنت/i.test(n)) return 'hyundai';
+  return '';
+}
+function carLogo(c){ const k=logoKey(c);
+  return k?'<img class="carlogo" src="'+LOGOS[k].src+'" alt="'+esc(LOGOS[k].nm)+'">':'<div class="carlogo emo">🚗</div>'; }
 function vCars(){
   const ids=MY_CARS.filter(id=>CARS[id]);
   let h='<div class="sec"><h2>🚗 اختار العربية</h2><span class="cnt">'+ids.length+'</span></div>';
   if(!ids.length) h+='<div class="empty"><span class="big">🚗</span>بحمّل العربيات…</div>';
   ids.forEach(id=>{ const c=CARS[id];
-    h+='<button type="button" class="carcard'+(id===CUR_CAR?' on':'')+'" data-car="'+esc(id)+'">'
-     + '<span class="cic">🚗</span><span style="flex:1;min-width:0"><div class="nm">'+esc(c.nm||'عربية')+'</div>'
-     + '<div class="ln">'+esc(carLine(c)||'—')+'</div>'
-     + '<div class="ln">العداد: '+nf(Number(c.odo)||0)+' كم</div></span><span class="go">‹</span></button>';
+    h+='<button type="button" class="carcard c2'+(id===CUR_CAR?' on':'')+'" data-car="'+esc(id)+'">'
+     + carLogo(c)
+     + '<div class="nm">'+esc(c.nm||'عربية')+'</div>'
+     + (carLine(c)?'<div class="ln">'+esc(carLine(c))+'</div>':'')
+     + '<div class="ln">العداد: '+nf(Number(c.odo)||0)+' كم</div></button>';
   });
   if(REAL_ROLE==='admin') h+='<div class="tiny" style="text-align:center;margin-top:12px">تضيف عربية أو تعدّلها من «الإعدادات».</div>';
   $('#view').innerHTML=h;
@@ -1403,6 +1431,9 @@ function shCar(id){
    +'<label class="f"><span>اسم العربية</span><input id="kN" value="'+esc(c.nm||'')+'" placeholder="مثلًا: هيونداي فيرنا"></label>'
    +'<div class="grid2"><label class="f"><span>رقم اللوحة</span><input id="kP" value="'+esc(c.plate||'')+'"></label>'
    +'<label class="f"><span>الموديل</span><input id="kY" inputmode="numeric" value="'+esc(c.year||'')+'"></label></div>'
+   +'<label class="f"><span>اللوجو</span><select id="kL">'
+   +[['','تلقائي من اسم العربية'],['skoda','سكودا'],['hyundai','هيونداي'],['none','من غير لوجو 🚗']]
+      .map(o=>'<option value="'+o[0]+'"'+((c.logo||'')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'
    +(isNew?'<label class="f"><span>العداد دلوقتي (كم)</span><input id="kO" inputmode="numeric" placeholder="0"></label>'
       +'<div class="tiny" style="margin:-4px 0 10px">العربية هتبدأ بنفس بنود الصيانة، وتقدر تعدّلها من «السجل» وإنت فاتحها. '
       +'والمديرين بيشوفوها على طول — والباقيين تختار من «المستخدمين».</div>':'')
@@ -1412,12 +1443,12 @@ function shCar(id){
   const err=t=>{const e=$('#kErr');e.style.display='block';e.textContent=t;};
   $('#kX').onclick=close_;
   $('#kS').onclick=async()=>{
-    const nm=$('#kN').value.trim(), plate=$('#kP').value.trim(), year=$('#kY').value.trim();
+    const nm=$('#kN').value.trim(), plate=$('#kP').value.trim(), year=$('#kY').value.trim(), logo=$('#kL').value;
     if(!nm){err('اكتب اسم العربية');return;}
     $('#kS').disabled=true;
     try{
-      if(isNew){ await addCar(nm,plate,year,parseInt($('#kO').value||'0',10)||0); close_(); toast('اتضافت ✓'); }
-      else { await carDoc(id).update({nm:nm,plate:plate,year:year}); logEvent('car','عدّل بيانات العربية: '+nm,'',carDoc(id)); close_(); toast('اتحفظ'); }
+      if(isNew){ await addCar(nm,plate,year,parseInt($('#kO').value||'0',10)||0,logo); close_(); toast('اتضافت ✓'); }
+      else { await carDoc(id).update({nm:nm,plate:plate,year:year,logo:logo}); logEvent('car','عدّل بيانات العربية: '+nm,'',carDoc(id)); close_(); toast('اتحفظ'); }
     }catch(e){ console.warn(e); err('مقدرتش أحفظ — جرّب تاني'); $('#kS').disabled=false; }
   };
   const d=$('#kD'); if(d)d.onclick=async()=>{
@@ -2030,14 +2061,14 @@ async function removeUser(email,username){
   logEvent('user','شال '+((old&&old.name)||username||email)+' من البرنامج');
 }
 /* إضافة عربية: المديرين كلهم بيشوفوها على طول */
-async function addCar(nm,plate,year,odo){
+async function addCar(nm,plate,year,odo,logo){
   const id='car'+Date.now().toString(36), ref=carDoc(id);
   const admins=allUsers().filter(u=>u.role==='admin'&&u.email!==MYEMAIL);
   const base={owner:fbUser.uid, ownerEmail:MYEMAIL, nm:nm, plate:plate, year:year,
     odo:Number(odo)||0, odoDate:todayISO(), avg:1500,
     roles:{[MYEMAIL]:'admin'}, names:{[MYEMAIL]:MY_DISPLAY||MYNAME||'المدير'},
     unames:(MY_LOGIN&&MY_LOGIN!==MYEMAIL)?{[MYEMAIL]:MY_LOGIN}:{}, uids:{[MYEMAIL]:fbUser.uid},
-    emails:[MYEMAIL], perms:clean(PERMS), createdAt:Date.now()};
+    emails:[MYEMAIL], perms:clean(PERMS), logo:logo||'', createdAt:Date.now()};
   await ref.set(base);
   const b=FS.batch();
   DEFAULT_ITEMS.forEach(d=>b.set(ref.collection('items').doc(d.id),clean(Object.assign({lastKm:null,lastDate:''},d))));

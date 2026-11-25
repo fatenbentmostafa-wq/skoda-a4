@@ -203,6 +203,9 @@ html.nosc,html.nosc body{overflow:hidden!important;overscroll-behavior:none}
 .sheet h3 .ic{font-size:26px}
 .acts{display:flex;gap:9px;margin-top:8px}
 .sheet .acts{flex-direction:row-reverse}
+.sugs{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+.sug{background:#16332c;color:#9ec9b9;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sug.on{background:var(--gold2);color:#1a1405;border-color:var(--gold2)}
 .acts .btn{flex:1}
 .empty{text-align:center;color:var(--muted);padding:30px 16px;font-size:13.5px;line-height:1.9}
 .empty .big{font-size:38px;display:block;margin-bottom:8px}
@@ -992,11 +995,9 @@ function vCfg(){
   }
 
   /* البنود اتنقلت لصفحة السجل */
-  if(HASCAR&&canSee('items')){
+  if(HASCAR&&canSee('items')&&!ITEMS.length){
     h+='<div class="card"><h3>🧰 بنود الصيانة والمواعيد</h3>'
-     + '<div class="tiny" style="margin-bottom:10px">البنود ومواعيدها في صفحة «السجل» — تضيف وتمسح وتعدّل من هناك.</div>'
-     + (ITEMS.length?'<button class="btn ghost block" data-a="goitems">افتح البنود في السجل</button>'
-                    :'<button class="btn block" data-a="seed">تحميل القائمة الجاهزة</button>')
+     + '<button class="btn block" data-a="seed">تحميل القائمة الجاهزة</button>'
      + '</div>';
   }
 
@@ -1283,9 +1284,7 @@ function shItem(id,ro){
     boxes.push('<div class="nxb '+c+'"><div class="l">📅 بتاريخ</div><div class="v">'+fmtDate(isoOf(s.nextDate))+'</div>'
       +'<div class="s">'+(s.leftDays>=0?'فاضل '+fmtDur(s.leftDays):'فات بـ '+fmtDur(s.leftDays))+'</div></div>'); }
   if(boxes.length){
-    h+='<div class="nxlbl">هيتغير المرة الجاية'+(boxes.length>1?' — أيهما ييجي الأول':'')+':</div>'
-     +'<div class="nxt'+(boxes.length>1?'':' one')+'">'+boxes.join('')+'</div>'
-     +'<div class="bar" style="margin:0 0 12px"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div>';
+    h+='<div class="bar" style="margin:0 0 12px"><i class="'+(s.st==='unknown'?'':s.st)+'" style="width:'+Math.round(Math.min(s.frac,1)*100)+'%"></i></div>';
   } else {
     h+='<div class="note" style="margin-bottom:12px">لسه مسجّلتش آخر مرة اتعمل — سجّلها عشان أحسبلك الميعاد الجاي.</div>';
   }
@@ -1333,28 +1332,62 @@ function shLog(itemId){
   const sel=itemId||'';
   const tilesH=list.map(i=>'<button type="button" class="pk1'+(i.id===sel?' on':'')+'" data-pick="'+esc(i.id)+'">'
     +'<span class="ic">'+icOf(i)+'</span><span>'+esc(i.nm)+'</span></button>').join('');
+  /* مين عملها: قايمة بأسماء المستخدمين + «حد تاني» */
+  const names=[]; const addN=n=>{n=(n||'').trim(); if(n&&names.indexOf(n)<0)names.push(n);};
+  addN(MY_DISPLAY); allUsers().forEach(u=>addN(u.name||u.un));
+  const whoOpts=names.map(n=>'<option>'+esc(n)+'</option>').join('')+'<option value="__o">حد تاني…</option>';
   open_('<h3><span class="ic">✅</span>تسجيل غيار</h3>'
   +'<label class="f"><span>اختار البند</span></label><input type="hidden" id="lI" value="'+esc(sel)+'">'
   +'<div class="pick">'+tilesH+'</div>'
   +'<div class="grid2"><label class="f"><span>العداد وقتها</span><input id="lK" inputmode="numeric" value="'+esc(CAR.odo||'')+'"></label>'
   +'<label class="f"><span>التاريخ</span><input id="lD" type="date" value="'+todayISO()+'"></label></div>'
-  +'<div class="grid2"><label class="f"><span>مين عملها</span><input id="lB" placeholder="الاسم"></label>'
+  +(canEdit('items')?'<div class="grid2"><label class="f"><span>كل كام كم</span><input id="lEK" inputmode="numeric"></label>'
+     +'<label class="f"><span>كل كام شهر</span><input id="lEM" inputmode="numeric"></label></div>'
+     +'<div class="tiny" id="lTip" style="margin:-6px 0 12px"></div>':'')
+  +'<div class="grid2"><label class="f"><span>مين عملها</span><select id="lBs">'+whoOpts+'</select>'
+  +'<input id="lB" placeholder="اكتب الاسم" style="display:none;margin-top:6px"></label>'
   +(canSee('costs')?'<label class="f"><span>التكلفة (جنيه)</span><input id="lC" inputmode="numeric" placeholder="اختياري"></label>':'')+'</div>'
   +'<label class="f"><span>المكان / التوكيل</span><input id="lP" placeholder="اختياري"></label>'
-  +'<label class="f"><span>ملاحظات</span><textarea id="lN" placeholder="نوع الزيت، الماركة، أي حاجة مهمة…"></textarea></label>'
+  +'<div class="sugs" id="lPs"></div>'
+  +'<label class="f"><span>ملاحظات</span><textarea id="lN"></textarea></label>'
+  +'<div class="sugs" id="lNs"></div>'
   +'<div class="acts"><button class="btn ghost" id="lX">إلغاء</button><button class="btn gold" id="lS">حفظ</button></div>');
   $('#lX').onclick=close_;
+  $('#lBs').onchange=()=>{const o=$('#lBs').value==='__o'; $('#lB').style.display=o?'':'none'; if(o)$('#lB').focus();};
+  /* اقتراحات: الأماكن اللي اتعملت قبل كده، وآخر ملاحظة للبند — تدوس تختار أو تسيب */
+  const recent=LOGS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||((b.ts||0)-(a.ts||0)));
+  const sugs=(box,inp,vals)=>{ const el=$(box); el.innerHTML=vals.map((v,i)=>'<button type="button" class="sug" data-i="'+i+'">'+esc(v)+'</button>').join('');
+    $$(box+' .sug').forEach(b=>b.onclick=()=>{ const v=vals[b.dataset.i], on=b.classList.contains('on');
+      $$(box+' .sug').forEach(x=>x.classList.remove('on')); if(on){$(inp).value='';}else{$(inp).value=v;b.classList.add('on');} }); };
+  const fillFor=id=>{
+    const it=itemById(id); const mine=recent.filter(l=>l.itemId===id);
+    const pl=[]; mine.concat(recent).forEach(l=>{const p=(l.place||'').trim(); if(p&&pl.indexOf(p)<0)pl.push(p);});
+    sugs('#lPs','#lP',pl.slice(0,5));
+    const nt=mine.map(l=>(l.notes||'').trim()).filter(Boolean); const lastN=nt.length?[nt[0]]:[];
+    sugs('#lNs','#lN',lastN); if(lastN.length) $('#lNs .sug').textContent='زي آخر مرة: '+lastN[0];
+    $('#lN').value=''; $('#lN').placeholder=it?'ملاحظات عن «'+it.nm+'» — الماركة، النوع، أي حاجة مهمة…':'اختار البند الأول';
+    if($('#lEK')){ $('#lEK').value=it?(it.km||0):''; $('#lEM').value=it?(it.mo||0):'';
+      $('#lTip').textContent=it&&it.tip?'💡 '+it.tip:''; $('#lTip').style.display=it&&it.tip?'':'none'; }
+  };
+  fillFor(sel);
   $$('#sheet [data-pick]').forEach(b=>b.onclick=()=>{
-    $('#lI').value=b.dataset.pick; $$('#sheet .pk1').forEach(x=>x.classList.toggle('on',x===b)); });
+    $('#lI').value=b.dataset.pick; $$('#sheet .pk1').forEach(x=>x.classList.toggle('on',x===b)); fillFor(b.dataset.pick); });
   const on=$('#sheet .pk1.on'); if(on) try{ on.scrollIntoView({block:'nearest'}); }catch(e){}
   $('#lS').onclick=async()=>{
-    const it=itemById($('#lI').value), km=parseInt($('#lK').value,10);
+    let it=itemById($('#lI').value); const km=parseInt($('#lK').value,10);
     if(!it){alert('اختار البند');return;}
     if(isNaN(km)||km<0){alert('اكتب رقم العداد');return;}
     const date=$('#lD').value||todayISO();
     const cEl=$('#lC');
+    const by=$('#lBs').value==='__o'?$('#lB').value.trim():$('#lBs').value;
+    const eK=$('#lEK')?parseInt($('#lEK').value,10):NaN, eM=$('#lEM')?parseInt($('#lEM').value,10):NaN;
     close_();
-    await addLog({id:uid(),itemId:it.id,nm:it.nm,km:km,date:date,by:$('#lB').value.trim(),
+    /* المدة اتغيرت المرة دي؟ تتحفظ على البند */
+    if(!isNaN(eK)&&!isNaN(eM)&&(eK!==(Number(it.km)||0)||eM!==(Number(it.mo)||0))){
+      await saveItem(Object.assign({},it,{km:Math.max(0,eK),mo:Math.max(0,eM)}));
+      logEvent('item','عدّل ميعاد: '+it.nm); it=itemById(it.id)||it;
+    }
+    await addLog({id:uid(),itemId:it.id,nm:it.nm,km:km,date:date,by:by,
       cost:cEl?(parseInt(cEl.value,10)||0):0,place:$('#lP').value.trim(),notes:$('#lN').value.trim(),ts:Date.now()});
     logEvent('log','سجّل غيار: '+it.nm,nf(km)+' كم · '+fmtDate(date));
     /* لو ده غيار قديم بيتسجل متأخر، مايغطّيش على تسجيل أحدث */
